@@ -10,7 +10,7 @@ rocznikami.
 | ------------------- | ------------------- | ------------------------------------------- |
 | Wiktor Zabek        | Frontend / Lider    | Komponenty UI, widoki, prezentacja          |
 | Kamil Gebala        | Backend             | Architektura, API, baza danych              |
-| Aleksander Dygo     | Full-stack / DevOps | Autentykacja, deploy                        |
+| Aleksander Dygoń    | Full-stack / DevOps | Autentykacja, deploy                        |
 | Maksymilian Stuglik | Frontend / PM       | Backlog, widoki nauki, Confluence           |
 
 ## Tech stack
