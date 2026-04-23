@@ -1,0 +1,25 @@
+{
+  "name": "syncu",
+  "private": true,
+  "version": "0.0.0",
+  "description": "SyncU - Synchronise University (monorepo)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:migrate": "turbo run db:migrate --filter=@syncu/api"
+  },
+  "packageManager": "bun@1.1.0",
+  "engines": {
+    "bun": ">=1.1.0"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "typescript": "~6.0.2"
+  }
+}

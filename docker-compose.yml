@@ -1,0 +1,20 @@
+# Dev services dla SyncU.
+# Na etapie dev baza to SQLite (plik), ale compose zostawiamy zgodnie z instrukcja
+# setupu w Confluence ("docker compose up -d") - miejsce na przyszle uslugi
+# (np. Postgres na staging/prod, mailhog, redis).
+services:
+  # placeholder: odkomentuj, gdy dojdzie Postgres
+  # db:
+  #   image: postgres:16-alpine
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_USER: syncu
+  #     POSTGRES_PASSWORD: syncu
+  #     POSTGRES_DB: syncu
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - db_data:/var/lib/postgresql/data
+
+# volumes:
+#   db_data:

@@ -1,0 +1,39 @@
+# deps / build
+node_modules
+dist
+dist-ssr
+build
+.turbo
+.next
+coverage
+
+# env
+.env
+.env.local
+.env.*.local
+*.local
+
+# logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+bun-debug.log*
+
+# db (dev)
+*.sqlite
+*.sqlite-journal
+*.db
+
+# editor / os
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
