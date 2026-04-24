@@ -6,29 +6,20 @@ rocznikami.
 
 ## Zespol
 
-| Osoba               | Rola                     | Obszar                                      |
-| ------------------- |--------------------------| ------------------------------------------- |
-| Wiktor Zabek        | Frontend / Lider         | Komponenty UI, widoki, prezentacja          |
-| Kamil Gebala        | Backend                  | Architektura, API, baza danych              |
-| Aleksander Dygo     | Full-stack / DevOps      | Autentykacja, deploy                        |
-| Maksymilian Stuglik | Frontend / Documentation | Backlog, widoki nauki, Confluence           |
+| Osoba               | Rola                | Obszar                                      |
+| ------------------- | ------------------- | ------------------------------------------- |
+| Wiktor Zabek        | Frontend / Lider    | Komponenty UI, widoki, prezentacja          |
+| Kamil Gebala        | Backend             | Architektura, API, baza danych              |
+| Aleksander Dygoń    | Full-stack / DevOps | Autentykacja, deploy                        |
+| Maksymilian Stuglik | Frontend / PM       | Backlog, widoki nauki, Confluence           |
 
 ## Tech stack
 
 - **Frontend:** React + TypeScript (Vite) — deploy: Vercel
-- **Backend:** Bun + Elysia — deploy: Hetzner
+- **Backend:** Bun + Elysia — deploy: Fly.io
 - **Baza danych:** SQLite (dev)
-- **Monorepo:** Bun Workspaces
-- **Testy:** `bun test` (built-in, unit / integration / e2e)
-
-## Glowne ekrany
-
-| Widok      | Opis                                                   |
-| ---------- | ------------------------------------------------------ |
-| Dashboard  | Zajecia dnia + najblizsze kolokwia + zadania nauki     |
-| Kalendarz  | Plan zajec + obciazenie kolokwiami, planowanie         |
-| Grupy      | Zajecia, dokumenty, kolokwia, materialy                |
-| Biblioteka | Materialy (uczelnia -> kierunek -> rok -> przedmiot)   |
+- **Monorepo:** Turborepo + Bun Workspaces
+- **Testy:** Vitest (unit/integration), Playwright (e2e)
 
 ## Struktura
 
@@ -40,15 +31,18 @@ packages/
   types/  # Wspoldzielone typy TS
   ui/     # Komponenty React
   core/   # Czyste funkcje biznesowe
+turbo.json
 package.json
 ```
 
 ## Setup lokalny
 
-Wymagania: **Bun >= 1.1**, **Git**.
+Wymagania: **Bun >= 1.1**, **Docker Desktop**, **Git**.
 
 ```bash
 bun install
+docker compose up -d
+bun run db:migrate
 bun run dev
 ```
 
@@ -56,15 +50,13 @@ Skopiuj `.env.example` do `.env` i uzupelnij zmienne.
 
 ## Skrypty (root)
 
-| Skrypt               | Opis                                       |
-| -------------------- | ------------------------------------------ |
-| `bun run dev`        | Dev rownolegle dla wszystkich workspace'ow |
-| `bun run dev:web`    | Tylko frontend                             |
-| `bun run dev:api`    | Tylko backend                              |
-| `bun run build`      | Build calosci                              |
-| `bun run lint`       | Lint wszystkich pakietow                   |
-| `bun run test`       | `bun test` we wszystkich workspace'ach     |
-| `bun run db:migrate` | Migracje SQLite w `@syncu/api`             |
+| Skrypt             | Opis                                   |
+| ------------------ | -------------------------------------- |
+| `bun run dev`      | Dev dla wszystkich aplikacji (turbo)   |
+| `bun run build`    | Build calosci                          |
+| `bun run lint`     | Lint wszystkich pakietow               |
+| `bun run test`     | Testy (Vitest)                         |
+| `bun run db:migrate` | Migracje SQLite w `@syncu/api`       |
 
 ## Branching
 
