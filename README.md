@@ -6,12 +6,12 @@ rocznikami.
 
 ## Zespol
 
-| Osoba               | Rola                | Obszar                                      |
-| ------------------- | ------------------- | ------------------------------------------- |
-| Wiktor Zabek        | Frontend / Lider    | Komponenty UI, widoki, prezentacja          |
-| Kamil Gebala        | Backend             | Architektura, API, baza danych              |
-| Aleksander Dygoń    | Full-stack / DevOps | Autentykacja, deploy                        |
-| Maksymilian Stuglik | Frontend / PM       | Backlog, widoki nauki, Confluence           |
+| Osoba               | Rola                     | Obszar                                      |
+| ------------------- |--------------------------| ------------------------------------------- |
+| Wiktor Zabek        | Frontend / Lider         | Komponenty UI, widoki, prezentacja          |
+| Kamil Gebala        | Backend                  | Architektura, API, baza danych              |
+| Aleksander Dygoń    | Full-stack / DevOps      | Autentykacja, deploy                        |
+| Maksymilian Stuglik | Frontend / Documentation | Backlog, widoki nauki, Confluence           |
 
 ## Tech stack
 
