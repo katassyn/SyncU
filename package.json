@@ -8,18 +8,19 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
-    "test": "turbo run test",
-    "db:migrate": "turbo run db:migrate --filter=@syncu/api"
+    "dev": "bun run --filter='*' dev",
+    "dev:web": "bun run --filter=@syncu/web dev",
+    "dev:api": "bun run --filter=@syncu/api dev",
+    "build": "bun run --filter='*' build",
+    "lint": "bun run --filter='*' lint",
+    "test": "bun run --filter='*' test",
+    "db:migrate": "bun run --filter=@syncu/api db:migrate"
   },
   "packageManager": "bun@1.1.0",
   "engines": {
     "bun": ">=1.1.0"
   },
   "devDependencies": {
-    "turbo": "^2.3.0",
     "typescript": "~6.0.2"
   }
 }

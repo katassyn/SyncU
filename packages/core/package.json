@@ -9,14 +9,14 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "bun test",
     "lint": "eslint ."
   },
   "dependencies": {
     "@syncu/types": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "~6.0.2",
-    "vitest": "^2.1.0"
+    "@types/bun": "latest",
+    "typescript": "~6.0.2"
   }
 }
