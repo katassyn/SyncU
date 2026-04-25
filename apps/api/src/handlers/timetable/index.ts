@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
+import { importTimetable } from "@syncu/core";
 import type { ImportResult } from "@syncu/types";
 import { db } from "../../db/client";
 import {
@@ -89,7 +90,44 @@ function getCurrentTimestamp(): string {
 	return new Date().toISOString();
 }
 
-export const timetableRoutes = new Elysia({ prefix: "/timetable" }).post(
+function isSpreadsheetFile(filename: string): boolean {
+	return /\.(xlsx|xls)$/i.test(filename);
+}
+
+export const timetableRoutes = new Elysia({ prefix: "/timetable" })
+	.post("/import", async ({ request, set }) => {
+		const formData = await request.formData();
+		const file = formData.get("file");
+
+		if (!(file instanceof File)) {
+			set.status = 400;
+			return { message: "Missing file field." };
+		}
+
+		if (!isSpreadsheetFile(file.name)) {
+			set.status = 400;
+			return { message: "File must be in .xls or .xlsx format." };
+		}
+
+		try {
+			const buffer = await file.arrayBuffer();
+			const parsed = importTimetable(buffer);
+
+			return {
+				fileName: file.name,
+				selectedSectionId: parsed.sections[0]?.id ?? null,
+				sectionCount: parsed.sections.length,
+				lecturerCount: parsed.lecturers.length,
+				data: parsed,
+			};
+		} catch (error) {
+			set.status = 400;
+			return {
+				message: error instanceof Error ? error.message : "Timetable import failed.",
+			};
+		}
+	})
+	.post(
 	"/import/confirm",
 	({ body, set }) => {
 		if (body.section.entries.length === 0) {
