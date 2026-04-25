@@ -58,10 +58,12 @@ function getDb(): Database {
 
     db.run(`
       CREATE TABLE IF NOT EXISTS lecturers (
-        abbr TEXT PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        abbr TEXT NOT NULL,
         abbr_normalized TEXT NOT NULL,
         name TEXT NOT NULL,
-        email TEXT NOT NULL
+        email TEXT NOT NULL,
+        UNIQUE(abbr, name)
       )
     `);
     db.run(
@@ -126,7 +128,7 @@ export function saveSchedule(
     }
 
     const insertLecturer = d.prepare(
-      "INSERT INTO lecturers (abbr, abbr_normalized, name, email) VALUES (?, ?, ?, ?)"
+      "INSERT OR IGNORE INTO lecturers (abbr, abbr_normalized, name, email) VALUES (?, ?, ?, ?)"
     );
     for (const lect of data.lecturers) {
       insertLecturer.run(

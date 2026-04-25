@@ -20,6 +20,7 @@
 		"@syncu/types": "workspace:*",
 		"cheerio": "^1.2.0",
 		"elysia": "^1.1.0",
+		"logixlysia": "^6.3.1",
 		"xlsx": "^0.18.5"
 	},
 	"devDependencies": {

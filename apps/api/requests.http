@@ -1,17 +1,20 @@
+# @baseUrl = http://localhost:3001
+@baseUrl = http://62.238.6.62:3001
+
 ### List all available groups
-GET http://localhost:3001/schedule/groups
+GET {{baseUrl}}/schedule/groups
 
 ### List all lecturers
-GET http://localhost:3001/schedule/lecturers
+GET {{baseUrl}}/schedule/lecturers
 
 ### Full schedule (all sections)
-GET http://localhost:3001/schedule
+GET {{baseUrl}}/schedule
 
 ### Schedule for a specific group (replace with actual group id from /groups)
-GET http://localhost:3001/schedule/group/31_2
+GET {{baseUrl}}/schedule/group/31_2
 
 ### Schedule for string group (II stopien)
-GET http://localhost:3001/schedule/group/CY1
+GET {{baseUrl}}/schedule/group/CY1
 
 ### Schedule for lecturer by abbreviation
-GET http://localhost:3001/schedule/lecturer/JW.
+GET {{baseUrl}}/schedule/lecturer/JW.

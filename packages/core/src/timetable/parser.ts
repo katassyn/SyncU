@@ -262,7 +262,13 @@ export function parseLegend(data: Grid): LecturerInfo[] {
     })
   }
 
-  return lecturers
+  const seen = new Set<string>()
+  return lecturers.filter((l) => {
+    const key = `${l.abbr}\0${l.name}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 /**

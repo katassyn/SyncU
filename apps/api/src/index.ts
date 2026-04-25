@@ -1,9 +1,27 @@
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
+import logixlysia from "logixlysia";
 import { scheduleRoutes } from "./handlers/schedule";
 
 const app = new Elysia()
 	.use(cors({ origin: "*" }))
+	.use(
+		logixlysia({
+			config: {
+				service: 'api-server',
+				showStartupMessage: true,
+				startupMessageFormat: 'banner',
+				showContextTree: true,
+				contextDepth: 2,
+				slowThreshold: 500,
+				verySlowThreshold: 1000,
+				timestamp: {
+					translateTime: 'yyyy-mm-dd HH:MM:ss.SSS'
+				},
+				ip: true
+			}
+		})
+	)
 	.use(scheduleRoutes)
 	.get("/", () => ({ name: "SyncU API", status: "ok" }))
 	.listen({ port: Number(process.env.PORT ?? 3001), hostname: "0.0.0.0" });
