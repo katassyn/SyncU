@@ -1,0 +1,68 @@
+Table users {
+  id integer [pk, increment]
+  email text [not null, unique]
+  display_name text [not null]
+  university text
+  field_of_study text
+  year_of_study integer
+  created_at text [not null]
+  updated_at text [not null]
+}
+
+Table semesters {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > users.id]
+  name text [not null]
+  academic_year text [not null]
+  term text [not null, note: 'winter or summer']
+  starts_at text
+  ends_at text
+  is_active integer [not null, default: 0]
+  created_at text [not null]
+  updated_at text [not null]
+}
+
+Table courses {
+  id integer [pk, increment]
+  semester_id integer [not null, ref: > semesters.id]
+  name text [not null]
+  code text
+  lecturer_name text
+  room text
+  meeting_link text
+  meeting_code text
+  color text
+  created_at text [not null]
+  updated_at text [not null]
+}
+
+Table timetable_imports {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > users.id]
+  semester_id integer [ref: > semesters.id]
+  source_kind text [not null, note: 'xls, xlsx, manual']
+  source_url text
+  source_filename text
+  imported_at text [not null]
+  status text [not null, note: 'pending, completed, failed']
+  imported_sections_count integer [not null, default: 0]
+  imported_entries_count integer [not null, default: 0]
+  error_message text
+}
+
+Table class_sessions {
+  id integer [pk, increment]
+  course_id integer [not null, ref: > courses.id]
+  timetable_import_id integer [ref: > timetable_imports.id]
+  session_type text [not null, note: 'lecture, lab, project, seminar, exam']
+  title text [not null]
+  starts_at text [not null]
+  ends_at text [not null]
+  weekday integer [note: '1-7 for recurring sessions']
+  recurrence_rule text [note: 'optional recurring pattern']
+  room text
+  lecturer_name text
+  notes text
+  created_at text [not null]
+  updated_at text [not null]
+}
