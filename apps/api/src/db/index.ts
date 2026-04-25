@@ -1,76 +1,13 @@
-import { Database } from "bun:sqlite";
-import { mkdirSync } from "fs";
-import { dirname } from "path";
 import type {
   ScheduleData,
   ScheduleEntry,
   SectionSchedule,
   LecturerInfo,
 } from "@syncu/types";
+import { sqlite } from "./client";
 
-const DB_PATH = process.env.DB_PATH ?? "data/schedule.db";
-
-let db: Database;
-
-function getDb(): Database {
-  if (!db) {
-    mkdirSync(dirname(DB_PATH), { recursive: true });
-    db = new Database(DB_PATH, { create: true });
-    db.run("PRAGMA journal_mode = WAL");
-
-    db.run(`
-      CREATE TABLE IF NOT EXISTS schedule_meta (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        xls_filename TEXT NOT NULL,
-        source_url TEXT NOT NULL,
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )
-    `);
-
-    db.run(`
-      CREATE TABLE IF NOT EXISTS sections (
-        id TEXT PRIMARY KEY,
-        label TEXT NOT NULL,
-        year_sem_label TEXT NOT NULL,
-        group_id TEXT NOT NULL
-      )
-    `);
-    db.run(
-      "CREATE INDEX IF NOT EXISTS idx_sections_group_id ON sections(group_id)"
-    );
-
-    db.run(`
-      CREATE TABLE IF NOT EXISTS entries (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        section_id TEXT NOT NULL REFERENCES sections(id),
-        time TEXT NOT NULL,
-        date TEXT NOT NULL,
-        subject TEXT NOT NULL,
-        subject_normalized TEXT NOT NULL
-      )
-    `);
-    db.run(
-      "CREATE INDEX IF NOT EXISTS idx_entries_section_id ON entries(section_id)"
-    );
-    db.run(
-      "CREATE INDEX IF NOT EXISTS idx_entries_subject_normalized ON entries(subject_normalized)"
-    );
-
-    db.run(`
-      CREATE TABLE IF NOT EXISTS lecturers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        abbr TEXT NOT NULL,
-        abbr_normalized TEXT NOT NULL,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        UNIQUE(abbr, name)
-      )
-    `);
-    db.run(
-      "CREATE INDEX IF NOT EXISTS idx_lecturers_abbr_normalized ON lecturers(abbr_normalized)"
-    );
-  }
-  return db;
+function getDb() {
+  return sqlite;
 }
 
 export function getCachedFilename(): string | null {
