@@ -2,92 +2,90 @@ import { Elysia, t } from "elysia";
 import { normalize } from "@syncu/core";
 import { scrapeXlsUrl, downloadXls } from "./helpers";
 import { parseSchedule } from "./parser";
-import { getCachedSchedule, saveSchedule } from "../../db";
-import type { ScheduleData } from "@syncu/types";
+import {
+  getCachedFilename,
+  saveSchedule,
+  getSourceUrl,
+  getAllSections,
+  getAllLecturers,
+  getSectionsByGroupPrefix,
+  getEntriesByLecturerAbbr,
+  getLecturerByNormalizedAbbr,
+  getFullScheduleData,
+} from "../../db";
 
-async function getScheduleData(): Promise<ScheduleData> {
+async function ensureFreshData(): Promise<void> {
   const { url, filename } = await scrapeXlsUrl();
 
-  const cached = getCachedSchedule();
-  if (cached && cached.xls_filename === filename) {
-    return JSON.parse(cached.data_json);
-  }
+  const cachedFilename = getCachedFilename();
+  if (cachedFilename === filename) return;
 
   const xlsBuffer = await downloadXls(url);
   const scheduleData = parseSchedule(xlsBuffer, url);
 
-  saveSchedule(filename, JSON.stringify(scheduleData));
-
-  return scheduleData;
+  saveSchedule(scheduleData, filename, normalize);
 }
 
 export const scheduleRoutes = new Elysia({ prefix: "/schedule" })
   .get("/", async () => {
-    return getScheduleData();
+    await ensureFreshData();
+    return getFullScheduleData();
   })
   .get("/groups", async () => {
-    const data = await getScheduleData();
-    const groups = data.sections.map((s) => ({
+    await ensureFreshData();
+    const groups = getAllSections().map((s) => ({
       id: s.id,
       label: s.label,
       yearSemLabel: s.yearSemLabel,
       groupId: s.groupId,
     }));
-    return { groups, sourceUrl: data.sourceUrl };
+    return { groups, sourceUrl: getSourceUrl() };
   })
   .get("/lecturers", async () => {
-    const data = await getScheduleData();
-    return { lecturers: data.lecturers, sourceUrl: data.sourceUrl };
+    await ensureFreshData();
+    return { lecturers: getAllLecturers(), sourceUrl: getSourceUrl() };
   })
   .get(
     "/group/:groupId",
     async ({ params: { groupId } }) => {
-      const data = await getScheduleData();
-      const sections = data.sections.filter((s) => s.id.startsWith(groupId));
+      await ensureFreshData();
+      const sections = getSectionsByGroupPrefix(groupId);
 
       if (sections.length === 0) {
         throw new Error(`Group "${groupId}" not found`);
       }
 
-      return { ...data, sections };
+      return {
+        sourceUrl: getSourceUrl(),
+        sections,
+        lecturers: getAllLecturers(),
+      };
     },
     { params: t.Object({ groupId: t.String() }) }
   )
   .get(
     "/lecturer/:abbr",
     async ({ params: { abbr } }) => {
-      const data = await getScheduleData();
+      await ensureFreshData();
       const normalizedAbbr = normalize(abbr);
-      const abbrPattern = new RegExp(`\\b${normalizedAbbr}\\b`);
 
-      const entries: Array<{
-        date: string;
-        time: string;
-        subject: string;
-        group: string;
-      }> = [];
+      const entries = getEntriesByLecturerAbbr(normalizedAbbr);
+
+      // Deduplicate
       const seen = new Set<string>();
+      const unique = entries.filter((e) => {
+        const key = `${e.date}|${e.time}|${e.subject}|${e.group}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
 
-      for (const section of data.sections) {
-        for (const entry of section.entries) {
-          if (abbrPattern.test(normalize(entry.subject))) {
-            const key = `${entry.date}|${entry.time}|${entry.subject}|${section.label}`;
-            if (!seen.has(key)) {
-              seen.add(key);
-              entries.push({ ...entry, group: section.label });
-            }
-          }
-        }
-      }
-
-      const lecturer = data.lecturers.find(
-        (l) => normalize(l.abbr) === normalizedAbbr
-      );
+      const lecturer = getLecturerByNormalizedAbbr(normalizedAbbr);
 
       return {
         lecturer: lecturer ?? { abbr, name: "", email: "" },
-        entries,
-        sourceUrl: data.sourceUrl,
+        entries: unique,
+        sourceUrl: getSourceUrl(),
       };
     },
     { params: t.Object({ abbr: t.String() }) }
