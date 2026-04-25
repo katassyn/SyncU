@@ -61,3 +61,14 @@ Content-Type: application/json
     ]
   }
 }
+
+### Preview timetable import
+POST {{baseUrl}}/timetable/import
+Content-Type: multipart/form-data; boundary=SyncUBoundary
+
+--SyncUBoundary
+Content-Disposition: form-data; name="file"; filename="plan.xlsx"
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+
+< ./data/plan.xlsx
+--SyncUBoundary--
