@@ -3,9 +3,9 @@ import { cors } from "@elysiajs/cors";
 import { scheduleRoutes } from "./handlers/schedule";
 
 const app = new Elysia()
-  .use(cors({ origin: "*" }))
-  .use(scheduleRoutes)
-  .get("/", () => ({ name: "SyncU API", status: "ok" }))
-  .listen(Number(process.env.PORT ?? 3001));
+	.use(cors({ origin: "*" }))
+	.use(scheduleRoutes)
+	.get("/", () => ({ name: "SyncU API", status: "ok" }))
+	.listen({ port: Number(process.env.PORT ?? 3001), hostname: "0.0.0.0" });
 
-console.log(`SyncU API running on http://localhost:${app.server?.port}`);
+console.log(`SyncU API running on http://0.0.0.0:${app.server?.port}`);
