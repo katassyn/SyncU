@@ -20,6 +20,9 @@ yarn-debug.log*
 pnpm-debug.log*
 bun-debug.log*
 
+# docs (lokalne notatki, prawdziwa dok. w Confluence)
+docs/
+
 # db (dev)
 *.sqlite
 *.sqlite-journal
