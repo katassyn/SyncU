@@ -1,34 +1,12 @@
-import { Routes, Route, NavLink, Navigate, useParams } from 'react-router-dom'
+import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
 
-/**
- * G-2 punkt 1 - tylko routing.
- * Kazda strona ma na razie minimalny placeholder zeby nawigacja byla testowalna end-to-end.
- * G-2 punkt 2 podmieni te placeholdery na docelowe komponenty stron w `src/pages/`.
- */
-
-function Placeholder({ title }: { title: string }) {
-  return (
-    <section style={{ padding: '2rem' }}>
-      <h1>{title}</h1>
-      <p style={{ opacity: 0.6 }}>Placeholder - strona w budowie.</p>
-    </section>
-  )
-}
-
-function SubjectPlaceholder() {
-  const { id } = useParams<{ id: string }>()
-  return <Placeholder title={`Subject #${id}`} />
-}
-
-function NotFound() {
-  return (
-    <section style={{ padding: '2rem' }}>
-      <h1>404</h1>
-      <p>Strona nie istnieje.</p>
-      <NavLink to="/today">Wroc na dzis</NavLink>
-    </section>
-  )
-}
+import Today from './pages/Today'
+import Week from './pages/Week'
+import Subject from './pages/Subject'
+import Focus from './pages/Focus'
+import Library from './pages/Library'
+import Import from './pages/Import'
+import NotFound from './pages/NotFound'
 
 function Nav() {
   const linkStyle = ({ isActive }: { isActive: boolean }) => ({
@@ -62,15 +40,14 @@ function App() {
     <>
       <Nav />
       <Routes>
-        {/* "/" -> domyslnie wyrzucamy na /today */}
         <Route path="/" element={<Navigate to="/today" replace />} />
 
-        <Route path="/today" element={<Placeholder title="Today" />} />
-        <Route path="/week" element={<Placeholder title="Week" />} />
-        <Route path="/subject/:id" element={<SubjectPlaceholder />} />
-        <Route path="/focus" element={<Placeholder title="Focus" />} />
-        <Route path="/library" element={<Placeholder title="Library" />} />
-        <Route path="/import" element={<Placeholder title="Import" />} />
+        <Route path="/today" element={<Today />} />
+        <Route path="/week" element={<Week />} />
+        <Route path="/subject/:id" element={<Subject />} />
+        <Route path="/focus" element={<Focus />} />
+        <Route path="/library" element={<Library />} />
+        <Route path="/import" element={<Import />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
