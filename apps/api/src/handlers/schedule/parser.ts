@@ -25,7 +25,29 @@ export function fillMerges(
 }
 
 const YEAR_SEM_PATTERN = /ROK\s+[IVX]+\s+sem\s+\d+/i;
-const KNOWN_GROUPS = new Set([11, 12, 21, 22, 31, 32, 41, 42]);
+const GROUP_STRING_PATTERN = /^[A-Z]{2}\d{1,2}$/;
+const SKIP_CELLS = new Set(["sobota", "niedziela"]);
+
+function isGroupCell(cell: unknown): cell is number | string {
+  if (typeof cell === "number") return cell > 0 && cell < 100;
+  if (typeof cell === "string") {
+    const trimmed = cell.trim();
+    return !SKIP_CELLS.has(trimmed) && GROUP_STRING_PATTERN.test(trimmed);
+  }
+  return false;
+}
+
+function normalizeGroupId(cell: number | string): number | string {
+  return typeof cell === "number" ? cell : cell.toString().trim();
+}
+
+function countGroupCells(row: any[]): number {
+  let count = 0;
+  for (let c = 2; c < row.length; c++) {
+    if (isGroupCell(row[c])) count++;
+  }
+  return count;
+}
 
 export function discoverSections(data: any[][]): SectionConfig[] {
   const headerRows = data.slice(0, 15);
@@ -44,28 +66,43 @@ export function discoverSections(data: any[][]): SectionConfig[] {
   }
 
   let groupRow = -1;
-  for (let r = 0; r < headerRows.length; r++) {
-    const row = headerRows[r];
-    if (!row) continue;
-    let groupCount = 0;
-    for (const cell of row) {
-      if (typeof cell === "number" && KNOWN_GROUPS.has(cell)) groupCount++;
-    }
-    if (groupCount >= 2) {
-      groupRow = r;
-      break;
+  if (yearSemRow >= 0 && headerRows[yearSemRow + 1]) {
+    groupRow = yearSemRow + 1;
+  }
+  if (groupRow < 0 || countGroupCells(headerRows[groupRow]) < 2) {
+    groupRow = -1;
+    for (let r = 0; r < headerRows.length; r++) {
+      const row = headerRows[r];
+      if (!row) continue;
+      if (countGroupCells(row) >= 2) {
+        groupRow = r;
+        break;
+      }
     }
   }
 
   if (groupRow < 0) return [];
 
-  const groupColumnsMap = new Map<number, number[]>();
+  function resolveYearSem(col: number): string {
+    if (yearSemRow < 0 || !headerRows[yearSemRow]) return "";
+    for (let c = col; c >= 0; c--) {
+      const cell = headerRows[yearSemRow][c];
+      if (cell && typeof cell === "string" && YEAR_SEM_PATTERN.test(cell)) {
+        return cell.trim();
+      }
+    }
+    return "";
+  }
+
+  const groupColumnsMap = new Map<string, number[]>();
   const row = headerRows[groupRow];
-  for (let c = 0; c < row.length; c++) {
-    if (typeof row[c] === "number" && KNOWN_GROUPS.has(row[c])) {
-      const gid = row[c] as number;
-      if (!groupColumnsMap.has(gid)) groupColumnsMap.set(gid, []);
-      groupColumnsMap.get(gid)!.push(c);
+  for (let c = 2; c < row.length; c++) {
+    if (isGroupCell(row[c])) {
+      const gid = normalizeGroupId(row[c]);
+      const yearSem = resolveYearSem(c);
+      const key = yearSem ? `${gid}@@${yearSem}` : String(gid);
+      if (!groupColumnsMap.has(key)) groupColumnsMap.set(key, []);
+      groupColumnsMap.get(key)!.push(c);
     }
   }
 
@@ -74,23 +111,21 @@ export function discoverSections(data: any[][]): SectionConfig[] {
     (a, b) => a[1][0] - b[1][0]
   );
 
-  for (const [groupId, columns] of sortedGroups) {
-    const firstCol = columns[0];
+  const seenGroupIds = new Map<string, number>();
 
-    let yearSemLabel = "";
-    if (yearSemRow >= 0 && headerRows[yearSemRow]) {
-      for (let c = firstCol; c >= 0; c--) {
-        const cell = headerRows[yearSemRow][c];
-        if (cell && typeof cell === "string" && YEAR_SEM_PATTERN.test(cell)) {
-          yearSemLabel = cell.trim();
-          break;
-        }
-      }
-    }
+  for (const [compositeKey, columns] of sortedGroups) {
+    const [groupKey, yearSemLabel = ""] = compositeKey.split("@@");
+    const groupId: number | string = /^\d+$/.test(groupKey)
+      ? Number(groupKey)
+      : groupKey;
+
+    const occurrence = (seenGroupIds.get(groupKey) ?? 0) + 1;
+    seenGroupIds.set(groupKey, occurrence);
+    const idPrefix = occurrence > 1 ? `${groupId}_s${occurrence}` : `${groupId}`;
 
     for (let s = 0; s < columns.length; s++) {
       sections.push({
-        id: `${groupId}_${s + 1}`,
+        id: `${idPrefix}_${s + 1}`,
         label: yearSemLabel
           ? `${yearSemLabel} - Grupa ${groupId}_${s + 1}`
           : `Grupa ${groupId}_${s + 1}`,

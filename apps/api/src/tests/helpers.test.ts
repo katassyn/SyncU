@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { excelDateToJSDate } from "./helpers";
+import { excelDateToJSDate } from "../handlers/schedule/helpers";
 
 describe("excelDateToJSDate", () => {
   test("converts Excel serial 44927 to 2023-01-01", () => {

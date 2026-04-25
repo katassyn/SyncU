@@ -8,7 +8,7 @@ export interface SectionConfig {
   id: string;
   label: string;
   yearSemLabel: string;
-  groupId: number;
+  groupId: number | string;
   columns: number[];
 }
 
@@ -22,7 +22,7 @@ export interface SectionSchedule {
   id: string;
   label: string;
   yearSemLabel: string;
-  groupId: number;
+  groupId: number | string;
   entries: ScheduleEntry[];
 }
 

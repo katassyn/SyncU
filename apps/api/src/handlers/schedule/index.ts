@@ -25,9 +25,19 @@ export const scheduleRoutes = new Elysia({ prefix: "/schedule" })
   .get("/", async () => {
     return getScheduleData();
   })
+  .get("/groups", async () => {
+    const data = await getScheduleData();
+    const groups = data.sections.map((s) => ({
+      id: s.id,
+      label: s.label,
+      yearSemLabel: s.yearSemLabel,
+      groupId: s.groupId,
+    }));
+    return { groups, sourceUrl: data.sourceUrl };
+  })
   .get("/lecturers", async () => {
     const data = await getScheduleData();
-    return data.lecturers;
+    return { lecturers: data.lecturers, sourceUrl: data.sourceUrl };
   })
   .get(
     "/group/:groupId",
@@ -48,6 +58,7 @@ export const scheduleRoutes = new Elysia({ prefix: "/schedule" })
     async ({ params: { abbr } }) => {
       const data = await getScheduleData();
       const normalizedAbbr = normalize(abbr);
+      const abbrPattern = new RegExp(`\\b${normalizedAbbr}\\b`);
 
       const entries: Array<{
         date: string;
@@ -59,7 +70,7 @@ export const scheduleRoutes = new Elysia({ prefix: "/schedule" })
 
       for (const section of data.sections) {
         for (const entry of section.entries) {
-          if (normalize(entry.subject).includes(normalizedAbbr)) {
+          if (abbrPattern.test(normalize(entry.subject))) {
             const key = `${entry.date}|${entry.time}|${entry.subject}|${section.label}`;
             if (!seen.has(key)) {
               seen.add(key);

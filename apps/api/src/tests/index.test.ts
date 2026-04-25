@@ -7,7 +7,7 @@ const TEST_DB_PATH = "/tmp/syncu-test-schedule.db";
 process.env.DB_PATH = TEST_DB_PATH;
 
 // Dynamic import so DB_PATH env is set first
-const { getCachedSchedule, saveSchedule } = await import("./index");
+const { getCachedSchedule, saveSchedule } = await import("../db/index");
 
 function cleanup() {
   try {

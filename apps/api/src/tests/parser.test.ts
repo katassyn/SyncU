@@ -5,7 +5,7 @@ import {
   extractEntries,
   extractAllEntries,
   parseLegend,
-} from "./parser";
+} from "../handlers/schedule/parser";
 
 describe("fillMerges", () => {
   test("does nothing when merges is undefined", () => {
@@ -103,6 +103,35 @@ describe("discoverSections", () => {
     expect(sections.length).toBe(2);
     expect(sections[0].yearSemLabel).toBe("");
     expect(sections[0].label).toBe("Grupa 31_1");
+  });
+
+  test("discovers string group IDs (CY1, DS1, etc.)", () => {
+    const data: any[][] = [];
+    data[0] = [null, null, "ROK I sem 2"];
+    data[1] = [null, "sobota", null, "CY1", "CY2", "DS1"];
+
+    const sections = discoverSections(data);
+
+    expect(sections.length).toBe(3);
+    expect(sections[0].groupId).toBe("CY1");
+    expect(sections[0].id).toBe("CY1_1");
+    expect(sections[0].yearSemLabel).toBe("ROK I sem 2");
+    expect(sections[1].groupId).toBe("CY2");
+    expect(sections[2].groupId).toBe("DS1");
+  });
+
+  test("discovers mixed numeric and string group IDs", () => {
+    const data: any[][] = [];
+    data[0] = [null, null, "ROK I sem 1", null, null, null, "ROK I sem 2"];
+    data[1] = [null, "sobota", null, 11, 12, null, "CY1", "DS1"];
+
+    const sections = discoverSections(data);
+
+    expect(sections.length).toBe(4);
+    expect(sections[0].groupId).toBe(11);
+    expect(sections[1].groupId).toBe(12);
+    expect(sections[2].groupId).toBe("CY1");
+    expect(sections[3].groupId).toBe("DS1");
   });
 });
 

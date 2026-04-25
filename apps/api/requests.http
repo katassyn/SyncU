@@ -1,0 +1,17 @@
+### List all available groups
+GET http://localhost:3001/schedule/groups
+
+### List all lecturers
+GET http://localhost:3001/schedule/lecturers
+
+### Full schedule (all sections)
+GET http://localhost:3001/schedule
+
+### Schedule for a specific group (replace with actual group id from /groups)
+GET http://localhost:3001/schedule/group/31_2
+
+### Schedule for string group (II stopien)
+GET http://localhost:3001/schedule/group/CY1
+
+### Schedule for lecturer by abbreviation
+GET http://localhost:3001/schedule/lecturer/JW.
