@@ -2,7 +2,9 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { unlinkSync } from "fs";
 import { Elysia } from "elysia";
 
-const TEST_DB_PATH = "/tmp/syncu-test-import-confirm.db";
+const TEST_DB_PATH = `/tmp/syncu-test-import-confirm-${Date.now()}-${Math.random()
+	.toString(16)
+	.slice(2)}.db`;
 
 process.env.DB_PATH = TEST_DB_PATH;
 
