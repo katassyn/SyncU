@@ -27,6 +27,8 @@ rocznikami.
 apps/
   web/    # Frontend - React + TypeScript (Vite)
   api/    # Backend - Bun + Elysia
+docs/
+  db/     # Diagramy i dokumentacja modelu danych
 packages/
   types/  # Wspoldzielone typy TS
   ui/     # Komponenty React
@@ -47,6 +49,12 @@ bun run dev
 ```
 
 Skopiuj `.env.example` do `.env` i uzupelnij zmienne.
+
+## Model danych
+
+Diagram bazy w formacie DBML znajduje sie w `docs/db/schema.dbml`.
+
+Plik jest zrodlem do importu w `dbdiagram.io`, a wygenerowany link mozna podpiac w Confluence.
 
 ## Skrypty (root)
 

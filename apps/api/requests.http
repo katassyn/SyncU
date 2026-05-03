@@ -18,3 +18,60 @@ GET {{baseUrl}}/schedule/group/CY1
 
 ### Schedule for lecturer by abbreviation
 GET {{baseUrl}}/schedule/lecturer/JW.
+
+### Confirm timetable import
+POST {{baseUrl}}/timetable/import/confirm
+Content-Type: application/json
+
+{
+  "user": {
+    "email": "kamil@example.com",
+    "displayName": "Kamil Gebala",
+    "university": "Politechnika Krakowska",
+    "fieldOfStudy": "Informatyka",
+    "yearOfStudy": 2
+  },
+  "semester": {
+    "name": "Semestr 4",
+    "academicYear": "2025/2026",
+    "term": "summer",
+    "isActive": true
+  },
+  "source": {
+    "kind": "xlsx",
+    "filename": "plan.xlsx",
+    "url": null
+  },
+  "section": {
+    "id": "32_1",
+    "label": "ROK II sem 4 - Grupa 32_1",
+    "yearSemLabel": "ROK II sem 4",
+    "groupId": 32,
+    "entries": [
+      {
+        "date": "2026-04-25",
+        "time": "08:00-09:30",
+        "subject": "Algorytmy"
+      },
+      {
+        "date": "25.04",
+        "time": "10.00-11.30",
+        "subject": "Bazy Danych"
+      }
+    ]
+  }
+}
+
+### Preview timetable import
+POST {{baseUrl}}/timetable/import
+Content-Type: multipart/form-data; boundary=SyncUBoundary
+
+--SyncUBoundary
+Content-Disposition: form-data; name="file"; filename="plan.xlsx"
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+
+< ./data/plan.xlsx
+--SyncUBoundary--
+
+### Weekly timetable
+GET {{baseUrl}}/timetable/week?date=2026-05-06

@@ -21,7 +21,10 @@ pnpm-debug.log*
 bun-debug.log*
 
 # docs (lokalne notatki, prawdziwa dok. w Confluence)
-docs/
+docs/*
+!docs/db/
+docs/db/*
+!docs/db/schema.dbml
 
 # db (dev)
 *.sqlite

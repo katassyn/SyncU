@@ -4,6 +4,69 @@ export interface ScheduleEntry {
   subject: string;
 }
 
+export type ClassSessionType =
+  | "lecture"
+  | "lab"
+  | "project"
+  | "seminar"
+  | "exam";
+
+export type TimetableImportStatus = "pending" | "completed" | "failed";
+export type WeekParity = "even" | "odd";
+
+export interface ClassSession {
+  id: number;
+  courseId: number;
+  timetableImportId: number | null;
+  sessionType: ClassSessionType;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  weekday: number | null;
+  recurrenceRule: string | null;
+  room: string | null;
+  lecturerName: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Course {
+  id: number;
+  semesterId: number;
+  name: string;
+  code: string | null;
+  lecturerName: string | null;
+  room: string | null;
+  meetingLink: string | null;
+  meetingCode: string | null;
+  color: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ImportResult {
+  id: number;
+  userId: number;
+  semesterId: number | null;
+  sourceKind: string;
+  sourceUrl: string | null;
+  sourceFilename: string | null;
+  importedAt: string;
+  status: TimetableImportStatus;
+  importedSectionsCount: number;
+  importedEntriesCount: number;
+  errorMessage: string | null;
+}
+
+export interface WeekSchedule {
+  weekStart: string;
+  weekEnd: string;
+  weekParity: WeekParity;
+  courses: Course[];
+  sessions: ClassSession[];
+}
+
 export interface SectionConfig {
   id: string;
   label: string;
