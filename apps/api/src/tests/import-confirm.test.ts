@@ -11,6 +11,22 @@ process.env.DB_PATH = TEST_DB_PATH;
 const { timetableRoutes } = await import("../handlers/timetable/index");
 const { sqlite } = await import("../db/client");
 
+function getCounts() {
+	return {
+		users: (sqlite.query("SELECT COUNT(*) as count FROM users").get() as { count: number }).count,
+		semesters: (sqlite
+			.query("SELECT COUNT(*) as count FROM semesters")
+			.get() as { count: number }).count,
+		imports: (sqlite
+			.query("SELECT COUNT(*) as count FROM timetable_imports")
+			.get() as { count: number }).count,
+		courses: (sqlite.query("SELECT COUNT(*) as count FROM courses").get() as { count: number }).count,
+		sessions: (sqlite
+			.query("SELECT COUNT(*) as count FROM class_sessions")
+			.get() as { count: number }).count,
+	};
+}
+
 function cleanup() {
 	try {
 		unlinkSync(TEST_DB_PATH);
@@ -76,6 +92,7 @@ const validPayload = {
 
 describe("POST /timetable/import/confirm", () => {
 	test("saves imported records inside a transaction", async () => {
+		const before = getCounts();
 		const response = await req(validPayload);
 
 		expect(response.status).toBe(201);
@@ -92,20 +109,17 @@ describe("POST /timetable/import/confirm", () => {
 		expect(body.courseCount).toBe(2);
 		expect(body.classSessionCount).toBe(2);
 
-		const usersCount = sqlite.query("SELECT COUNT(*) as count FROM users").get() as { count: number };
-		const semestersCount = sqlite.query("SELECT COUNT(*) as count FROM semesters").get() as { count: number };
-		const importsCount = sqlite.query("SELECT COUNT(*) as count FROM timetable_imports").get() as { count: number };
-		const coursesCount = sqlite.query("SELECT COUNT(*) as count FROM courses").get() as { count: number };
-		const sessionsCount = sqlite.query("SELECT COUNT(*) as count FROM class_sessions").get() as { count: number };
+		const after = getCounts();
 
-		expect(usersCount.count).toBe(1);
-		expect(semestersCount.count).toBe(1);
-		expect(importsCount.count).toBe(1);
-		expect(coursesCount.count).toBe(2);
-		expect(sessionsCount.count).toBe(2);
+		expect(after.users - before.users).toBe(1);
+		expect(after.semesters - before.semesters).toBe(1);
+		expect(after.imports - before.imports).toBe(1);
+		expect(after.courses - before.courses).toBe(2);
+		expect(after.sessions - before.sessions).toBe(2);
 	});
 
 	test("rolls back when one of the entries is invalid", async () => {
+		const before = getCounts();
 		const response = await req({
 			...validPayload,
 			user: {
@@ -135,8 +149,14 @@ describe("POST /timetable/import/confirm", () => {
 		const rollbackUser = sqlite
 			.query("SELECT COUNT(*) as count FROM users WHERE email = ?")
 			.get("rollback@example.com") as { count: number };
+		const after = getCounts();
 
 		expect(rollbackUser.count).toBe(0);
-		expect(imports.count).toBe(1);
+		expect(imports.count).toBeGreaterThanOrEqual(1);
+		expect(after.users).toBe(before.users);
+		expect(after.semesters).toBe(before.semesters);
+		expect(after.imports).toBe(before.imports);
+		expect(after.courses).toBe(before.courses);
+		expect(after.sessions).toBe(before.sessions);
 	});
 });
