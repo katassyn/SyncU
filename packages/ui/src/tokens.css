@@ -107,12 +107,51 @@
   /* ── Typography ── */
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 
-  /* ── Letter spacing (custom scale matching design) ── */
-  /* Headings use negative tracking */
-  --tracking-h1:    -0.05em;
-  --tracking-h2:    -0.025em;
-  --tracking-h3:    -0.025em;
-  /* Labels / badges use wide tracking */
-  --tracking-label: 0.075em;
-  --tracking-badge: 0.125em;
+  /* ── Font sizes with paired line-heights (from Figma) ──
+     Generates: text-display, text-h2, text-h3, text-body,
+                text-ui, text-caption, text-label, text-badge
+     Usage: className="text-h2 font-bold"
+  ── */
+
+  /* Hero / display headings */
+  --text-display: 2.75rem;              /* 44px */
+  --text-display--line-height: 1.25;
+  --text-display--letter-spacing: -0.05em;
+
+  --text-display-lg: 3rem;              /* 48px — calendar month heading */
+  --text-display-lg--line-height: 1;
+  --text-display-lg--letter-spacing: -0.025em;
+
+  /* Section headings */
+  --text-h2: 1.25rem;                   /* 20px */
+  --text-h2--line-height: 1.4;
+  --text-h2--letter-spacing: -0.025em;
+
+  --text-h3: 1.125rem;                  /* 18px */
+  --text-h3--line-height: 1.555;
+
+  /* Body / content */
+  --text-body: 1rem;                    /* 16px */
+  --text-body--line-height: 1.5;
+
+  --text-ui: 0.875rem;                  /* 14px — subtitles, metadata */
+  --text-ui--line-height: 1.43;
+
+  /* Small / utility text */
+  --text-caption: 0.75rem;             /* 12px */
+  --text-caption--line-height: 1.333;
+
+  --text-label: 0.6875rem;             /* 11px — uppercase labels */
+  --text-label--line-height: 1.5;
+  --text-label--letter-spacing: 0.05em;
+
+  --text-badge: 0.625rem;              /* 10px — chips, event tags */
+  --text-badge--line-height: 1.5;
+  --text-badge--letter-spacing: 0.1em;
+
+  /* ── Spacing ──
+     Tailwind's default 4px scale covers all values from the design
+     (4, 8, 12, 16, 20, 24, 32, 48 px). No custom tokens needed.
+     Note: 44px padding (p-11) = 11 × 4px — matches Tailwind default.
+  ── */
 }
