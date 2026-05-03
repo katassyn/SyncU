@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { WeekEvent, WeekParity } from '@syncu/types';
 import { ScheduleCard } from './ScheduleCard';
 
@@ -27,8 +28,19 @@ const DAY_LABELS = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
 const hours = Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i);
 
 export function WeekGrid({ events, weekDates, weekParity }: WeekGridProps) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  const nowMinutesSinceStart = (now.getHours() - HOUR_START) * 60 + now.getMinutes();
+  const showNowLine =
+    nowMinutesSinceStart >= 0 &&
+    nowMinutesSinceStart < (HOUR_END - HOUR_START) * 60;
 
   return (
     <div className="overflow-x-auto">
@@ -121,6 +133,21 @@ export function WeekGrid({ events, weekDates, weekParity }: WeekGridProps) {
             }}
           />
         ))}
+
+        {/* Linia "teraz" */}
+        {showNowLine && (
+          <div
+            className="flex items-center pointer-events-none z-20"
+            style={{
+              gridColumn: '2 / -1',
+              gridRow: 2,
+              marginTop: `calc(${nowMinutesSinceStart / 30} * 1.75rem)`,
+            }}
+          >
+            <div className="size-2 rounded-full bg-danger shrink-0 -ml-1" />
+            <div className="flex-1 h-px bg-danger" />
+          </div>
+        )}
 
         {/* Events */}
         {events.map((event) => {
