@@ -12,6 +12,7 @@ export type ClassSessionType =
   | "exam";
 
 export type TimetableImportStatus = "pending" | "completed" | "failed";
+export type WeekParity = "even" | "odd";
 
 export interface ClassSession {
   id: number;
@@ -61,6 +62,7 @@ export interface ImportResult {
 export interface WeekSchedule {
   weekStart: string;
   weekEnd: string;
+  weekParity: WeekParity;
   courses: Course[];
   sessions: ClassSession[];
 }

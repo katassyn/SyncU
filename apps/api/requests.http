@@ -72,3 +72,6 @@ Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 
 < ./data/plan.xlsx
 --SyncUBoundary--
+
+### Weekly timetable
+GET {{baseUrl}}/timetable/week?date=2026-05-06

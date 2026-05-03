@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte, lt } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { importTimetable } from "@syncu/core";
-import type { ImportResult } from "@syncu/types";
+import type { ClassSession, Course, ImportResult, WeekParity, WeekSchedule } from "@syncu/types";
 import { db } from "../../db/client";
 import {
 	classSessions,
@@ -94,6 +94,62 @@ function isSpreadsheetFile(filename: string): boolean {
 	return /\.(xlsx|xls)$/i.test(filename);
 }
 
+function parseIsoDate(value: string): Date {
+	const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+	if (!match) {
+		throw new Error(`Invalid date query parameter: "${value}"`);
+	}
+
+	const [, year, month, day] = match;
+	const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+
+	if (Number.isNaN(date.getTime())) {
+		throw new Error(`Invalid date query parameter: "${value}"`);
+	}
+
+	return date;
+}
+
+function formatIsoDate(date: Date): string {
+	return date.toISOString().slice(0, 10);
+}
+
+function addUtcDays(date: Date, days: number): Date {
+	const next = new Date(date);
+	next.setUTCDate(next.getUTCDate() + days);
+	return next;
+}
+
+function getWeekBounds(date: Date) {
+	const day = date.getUTCDay();
+	const distanceFromMonday = day === 0 ? 6 : day - 1;
+	const weekStart = addUtcDays(date, -distanceFromMonday);
+	const weekEnd = addUtcDays(weekStart, 6);
+	const nextWeekStart = addUtcDays(weekStart, 7);
+
+	return { weekStart, weekEnd, nextWeekStart };
+}
+
+function getIsoWeek(date: Date): number {
+	const thursday = addUtcDays(date, 3 - ((date.getUTCDay() + 6) % 7));
+	const firstThursday = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 4));
+	const normalizedFirstThursday = addUtcDays(
+		firstThursday,
+		3 - ((firstThursday.getUTCDay() + 6) % 7),
+	);
+
+	return (
+		1 +
+		Math.round(
+			(thursday.getTime() - normalizedFirstThursday.getTime()) / (7 * 24 * 60 * 60 * 1000),
+		)
+	);
+}
+
+function getWeekParity(date: Date): WeekParity {
+	return getIsoWeek(date) % 2 === 0 ? "even" : "odd";
+}
+
 export const timetableRoutes = new Elysia({ prefix: "/timetable" })
 	.post("/import", async ({ request, set }) => {
 		const formData = await request.formData();
@@ -127,6 +183,112 @@ export const timetableRoutes = new Elysia({ prefix: "/timetable" })
 			};
 		}
 	})
+	.get(
+		"/week",
+		({ query, set }) => {
+			try {
+				const selectedDate = parseIsoDate(query.date);
+				const { weekStart, weekEnd, nextWeekStart } = getWeekBounds(selectedDate);
+
+				const rows = db
+					.select({
+						sessionId: classSessions.id,
+						courseId: courses.id,
+						timetableImportId: classSessions.timetableImportId,
+						sessionType: classSessions.sessionType,
+						title: classSessions.title,
+						startsAt: classSessions.startsAt,
+						endsAt: classSessions.endsAt,
+						weekday: classSessions.weekday,
+						recurrenceRule: classSessions.recurrenceRule,
+						sessionRoom: classSessions.room,
+						sessionLecturerName: classSessions.lecturerName,
+						notes: classSessions.notes,
+						sessionCreatedAt: classSessions.createdAt,
+						sessionUpdatedAt: classSessions.updatedAt,
+						semesterId: courses.semesterId,
+						courseName: courses.name,
+						courseCode: courses.code,
+						courseLecturerName: courses.lecturerName,
+						courseRoom: courses.room,
+						meetingLink: courses.meetingLink,
+						meetingCode: courses.meetingCode,
+						color: courses.color,
+						courseCreatedAt: courses.createdAt,
+						courseUpdatedAt: courses.updatedAt,
+					})
+					.from(classSessions)
+					.innerJoin(courses, eq(classSessions.courseId, courses.id))
+					.innerJoin(semesters, eq(courses.semesterId, semesters.id))
+					.where(
+						and(
+							eq(semesters.isActive, 1),
+							gte(classSessions.startsAt, `${formatIsoDate(weekStart)}T00:00:00`),
+							lt(classSessions.startsAt, `${formatIsoDate(nextWeekStart)}T00:00:00`),
+						),
+					)
+					.all();
+
+				const coursesById = new Map<number, Course>();
+				const sessions: ClassSession[] = [];
+
+				for (const row of rows) {
+					if (!coursesById.has(row.courseId)) {
+						coursesById.set(row.courseId, {
+							id: row.courseId,
+							semesterId: row.semesterId,
+							name: row.courseName,
+							code: row.courseCode,
+							lecturerName: row.courseLecturerName,
+							room: row.courseRoom,
+							meetingLink: row.meetingLink,
+							meetingCode: row.meetingCode,
+							color: row.color,
+							createdAt: row.courseCreatedAt,
+							updatedAt: row.courseUpdatedAt,
+						});
+					}
+
+					sessions.push({
+						id: row.sessionId,
+						courseId: row.courseId,
+						timetableImportId: row.timetableImportId,
+						sessionType: row.sessionType as ClassSession["sessionType"],
+						title: row.title,
+						startsAt: row.startsAt,
+						endsAt: row.endsAt,
+						weekday: row.weekday,
+						recurrenceRule: row.recurrenceRule,
+						room: row.sessionRoom,
+						lecturerName: row.sessionLecturerName,
+						notes: row.notes,
+						createdAt: row.sessionCreatedAt,
+						updatedAt: row.sessionUpdatedAt,
+					});
+				}
+
+				const response: WeekSchedule = {
+					weekStart: formatIsoDate(weekStart),
+					weekEnd: formatIsoDate(weekEnd),
+					weekParity: getWeekParity(selectedDate),
+					courses: [...coursesById.values()],
+					sessions,
+				};
+
+				return response;
+			} catch (error) {
+				set.status = 400;
+				return {
+					message: error instanceof Error ? error.message : "Failed to fetch week schedule.",
+				};
+			}
+		},
+		{
+			query: t.Object({
+				date: t.String({ format: "date" }),
+			}),
+		},
+	)
 	.post(
 	"/import/confirm",
 	({ body, set }) => {
