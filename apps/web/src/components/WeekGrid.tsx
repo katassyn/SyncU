@@ -1,9 +1,10 @@
-import type { WeekEvent } from '@syncu/types';
+import type { WeekEvent, WeekParity } from '@syncu/types';
 import { ScheduleCard } from './ScheduleCard';
 
 interface WeekGridProps {
   events: WeekEvent[];
   weekDates: Date[];
+  weekParity?: WeekParity;
 }
 
 const HOUR_START = 8;
@@ -25,7 +26,7 @@ const DAY_LABELS = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
 
 const hours = Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i);
 
-export function WeekGrid({ events, weekDates }: WeekGridProps) {
+export function WeekGrid({ events, weekDates, weekParity }: WeekGridProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -38,8 +39,19 @@ export function WeekGrid({ events, weekDates }: WeekGridProps) {
           gridTemplateRows: `3rem repeat(${SLOTS}, 1.75rem)`,
         }}
       >
-        {/* Corner spacer */}
-        <div style={{ gridColumn: 1, gridRow: 1 }} />
+        {/* Corner — marker parzystości */}
+        <div className="flex items-center justify-center" style={{ gridColumn: 1, gridRow: 1 }}>
+          {weekParity && (
+            <span className={[
+              'text-badge font-bold uppercase tracking-badge rounded-pill px-2 py-0.5 leading-tight',
+              weekParity === 'even'
+                ? 'bg-primary-light text-primary-nav'
+                : 'bg-surface-2 text-muted',
+            ].join(' ')}>
+              {weekParity === 'even' ? 'P' : 'NP'}
+            </span>
+          )}
+        </div>
 
         {/* Day headers */}
         {weekDates.map((date, i) => {
