@@ -94,3 +94,14 @@ export interface ScheduleData {
   sections: SectionSchedule[];
   lecturers: LecturerInfo[];
 }
+
+export interface WeekEvent {
+  id: string | number;
+  title: string;
+  type: ClassSessionType;
+  day: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  startTime: string;
+  endTime: string;
+  room?: string | null;
+  lecturer?: string | null;
+}
