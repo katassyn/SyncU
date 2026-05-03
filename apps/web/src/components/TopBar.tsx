@@ -28,15 +28,9 @@ export function TopBar({ onProfileClick }: TopBarProps) {
 
         {/* Center — navigation */}
         <nav className="flex items-center gap-8">
-          <NavLink to="/today" className={navLinkClass}>
-            Dashboard
-          </NavLink>
-          <NavLink to="/week" className={navLinkClass}>
-            Kalendarz
-          </NavLink>
-          <NavLink to="/library" className={navLinkClass}>
-            Grupy
-          </NavLink>
+          <NavLink to="/today" className={navLinkClass}>Dashboard</NavLink>
+          <NavLink to="/week"  className={navLinkClass}>Kalendarz</NavLink>
+          <NavLink to="/library" className={navLinkClass}>Grupy</NavLink>
         </nav>
 
         {/* Right — actions + avatar + brand */}

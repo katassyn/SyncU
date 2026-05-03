@@ -51,25 +51,16 @@ export function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
           </div>
         </div>
 
-        {/* Navigation links */}
-        <nav className="flex flex-col gap-1 px-3 py-4 border-b border-border-subtle">
-          {[
-            { label: 'Dashboard',  href: '/today' },
-            { label: 'Kalendarz',  href: '/week' },
-            { label: 'Grupy',      href: '/library' },
-            { label: 'Focus Mode', href: '/focus' },
-            { label: 'Import',     href: '/import' },
-          ].map(({ label, href }) => (
-            <a
-              key={href}
-              href={href}
-              onClick={onClose}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-card-sm text-body font-medium text-heading hover:bg-surface-1 transition-colors"
-            >
-              {label}
-            </a>
-          ))}
-        </nav>
+        {/* Links */}
+        <div className="flex flex-col gap-1 px-3 py-4 border-b border-border-subtle">
+          <a
+            href="/profile"
+            onClick={onClose}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-card-sm text-body font-medium text-heading hover:bg-surface-1 transition-colors"
+          >
+            Profil
+          </a>
+        </div>
 
         {/* Footer */}
         <div className="mt-auto px-3 py-4">
