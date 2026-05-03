@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { ScheduleData, ScheduleEntry, WeekEvent } from '@syncu/types'
+import type { ScheduleData, WeekEvent } from '@syncu/types'
 import { fetchGroupSchedule, fetchGroups, type GroupSummary } from '../lib/api'
 import { addDays, formatDDMM, startOfWeek } from '../lib/week'
 import { WeekDatePicker } from '../components/WeekDatePicker'

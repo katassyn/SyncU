@@ -1,4 +1,5 @@
-import type { WeekEvent, ClassSessionType } from '@syncu/types';
+import type { WeekEvent } from '@syncu/types';
+import { ScheduleCard } from './ScheduleCard';
 
 interface WeekGridProps {
   events: WeekEvent[];
@@ -20,45 +21,9 @@ function timeDurationInSlots(start: string, end: string): number {
   return ((eh * 60 + em) - (sh * 60 + sm)) / 30;
 }
 
-const TYPE_STYLES: Record<ClassSessionType, string> = {
-  lecture:  'bg-primary-light text-primary-nav border-l-[3px] border-primary',
-  lab:      'bg-surface-2 text-heading border-l-[3px] border-muted',
-  project:  'bg-surface-3 text-heading border-l-[3px] border-border-subtle',
-  seminar:  'bg-surface-1 text-heading border-l-[3px] border-border-subtle',
-  exam:     'bg-[rgba(168,56,54,0.08)] text-danger border-l-[3px] border-danger',
-};
-
 const DAY_LABELS = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
 
 const hours = Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i);
-
-interface ScheduleCardProps {
-  event: WeekEvent;
-  column: number;
-}
-
-function ScheduleCard({ event, column }: ScheduleCardProps) {
-  const rowStart = timeToRow(event.startTime);
-  const rowSpan = Math.max(1, timeDurationInSlots(event.startTime, event.endTime));
-
-  return (
-    <div
-      className={[
-        'rounded-card-sm px-2 py-1.5 overflow-hidden min-w-0 z-10',
-        TYPE_STYLES[event.type],
-      ].join(' ')}
-      style={{
-        gridColumn: column + 2,
-        gridRow: `${rowStart} / span ${rowSpan}`,
-      }}
-    >
-      <p className="text-badge font-bold leading-tight truncate">{event.title}</p>
-      {event.room && (
-        <p className="text-badge leading-tight truncate opacity-70">{event.room}</p>
-      )}
-    </div>
-  );
-}
 
 export function WeekGrid({ events, weekDates }: WeekGridProps) {
   const today = new Date();
@@ -146,9 +111,19 @@ export function WeekGrid({ events, weekDates }: WeekGridProps) {
         ))}
 
         {/* Events */}
-        {events.map((event) => (
-          <ScheduleCard key={event.id} event={event} column={event.day} />
-        ))}
+        {events.map((event) => {
+          const rowStart = timeToRow(event.startTime);
+          const rowSpan = Math.max(1, timeDurationInSlots(event.startTime, event.endTime));
+          return (
+            <ScheduleCard
+              key={event.id}
+              event={event}
+              column={event.day}
+              rowStart={rowStart}
+              rowSpan={rowSpan}
+            />
+          );
+        })}
       </div>
     </div>
   );

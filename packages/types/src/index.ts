@@ -104,4 +104,5 @@ export interface WeekEvent {
   endTime: string;
   room?: string | null;
   lecturer?: string | null;
+  teamsLink?: string | null;
 }
