@@ -17,8 +17,13 @@ sqlite.run("PRAGMA foreign_keys = ON");
 export const db = drizzle(sqlite, { schema });
 export const migrationsFolder = join(import.meta.dir, "migrations");
 
-migrate(db, {
-	migrationsFolder,
-});
+try {
+	migrate(db, { migrationsFolder });
+} catch (err: any) {
+	const msg = err?.message ?? "";
+	const causeMsg = err?.cause?.message ?? "";
+	if (!msg.includes("already exists") && !causeMsg.includes("already exists"))
+		throw err;
+}
 
 export type DbClient = typeof db;
