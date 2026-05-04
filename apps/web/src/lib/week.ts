@@ -39,6 +39,19 @@ export function formatWeekLabel(weekStart: Date): string {
   return `${weekStart.getDate()} ${months[weekStart.getMonth()]} - ${end.getDate()} ${months[end.getMonth()]} ${end.getFullYear()}`
 }
 
+/** Zwraca numer tygodnia ISO (1–53) dla podanej daty. */
+export function isoWeekNumber(d: Date): number {
+  const date = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7))
+  const yearStart = new Date(date.getFullYear(), 0, 4)
+  return 1 + Math.round(((date.getTime() - yearStart.getTime()) / 86400000 - 3 + ((yearStart.getDay() + 6) % 7)) / 7)
+}
+
+/** Zwraca parzystość tygodnia na podstawie numeru ISO. */
+export function weekParity(weekStart: Date): 'even' | 'odd' {
+  return isoWeekNumber(weekStart) % 2 === 0 ? 'even' : 'odd'
+}
+
 export const DAY_NAMES = [
   'Poniedzialek',
   'Wtorek',

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { ScheduleData } from '@syncu/types'
+import type { ScheduleData, WeekEvent } from '@syncu/types'
 import { fetchGroupSchedule, fetchGroups, type GroupSummary } from '../lib/api'
-import { startOfWeek } from '../lib/week'
+import { addDays, formatDDMM, startOfWeek, weekParity } from '../lib/week'
 import { WeekDatePicker } from '../components/WeekDatePicker'
 import { WeekGrid } from '../components/WeekGrid'
 import { PageShell } from './PageShell'
@@ -72,11 +72,28 @@ export default function Week() {
     }
   }, [])
 
-  // 2) Spluszczone wpisy dla wybranej grupy (laczymy wszystkie subgrupy)
-  const entries = useMemo(() => {
+  const weekDates = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+    [weekStart],
+  )
+
+  // 2) Spluszczone wpisy → WeekEvent[] dla nowego WeekGrid
+  const events = useMemo((): WeekEvent[] => {
     if (state.kind !== 'loaded') return []
-    return state.data.sections.flatMap((s) => s.entries)
-  }, [state])
+    const entries = state.data.sections.flatMap((s) => s.entries)
+    return entries.flatMap((entry, idx) => {
+      const day = weekDates.findIndex((d) => formatDDMM(d) === entry.date)
+      if (day === -1) return []
+      return [{
+        id: idx,
+        title: entry.subject,
+        type: 'lecture' as const,
+        day: day as WeekEvent['day'],
+        startTime: entry.time,
+        endTime: addMinutes(entry.time, 90),
+      }]
+    })
+  }, [state, weekDates])
 
   return (
     <PageShell title="Week" subtitle="Plan zajec na tydzien">
@@ -130,7 +147,7 @@ export default function Week() {
           )}
 
           {state.kind === 'loaded' && (
-            <WeekGrid weekStart={weekStart} entries={entries} />
+            <WeekGrid events={events} weekDates={weekDates} weekParity={weekParity(weekStart)} />
           )}
         </>
       )}
@@ -139,6 +156,12 @@ export default function Week() {
 }
 
 /* --- helpers --- */
+
+function addMinutes(time: string, mins: number): string {
+  const [h, m] = time.split(':').map(Number)
+  const total = h * 60 + m + mins
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
 
 function loadSchedule(
   groupId: string,
