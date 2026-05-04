@@ -84,13 +84,14 @@ export default function Week() {
     return entries.flatMap((entry, idx) => {
       const day = weekDates.findIndex((d) => formatDDMM(d) === entry.date)
       if (day === -1) return []
+      const { start, end } = parseTimeRange(entry.time)
       return [{
         id: idx,
         title: entry.subject,
         type: 'lecture' as const,
         day: day as WeekEvent['day'],
-        startTime: entry.time,
-        endTime: addMinutes(entry.time, 90),
+        startTime: start,
+        endTime: end,
       }]
     })
   }, [state, weekDates])
@@ -157,10 +158,15 @@ export default function Week() {
 
 /* --- helpers --- */
 
-function addMinutes(time: string, mins: number): string {
-  const [h, m] = time.split(':').map(Number)
-  const total = h * 60 + m + mins
-  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+// Parsuje zakres "8.00-10.30" (format PK) → { start: "08:00", end: "10:30" }
+function parseTimeRange(range: string): { start: string; end: string } {
+  const [startRaw = '', endRaw = ''] = range.split('-').map((s) => s.trim())
+  return { start: dotTimeToColon(startRaw), end: dotTimeToColon(endRaw) }
+}
+
+function dotTimeToColon(t: string): string {
+  const [h = '0', m = '00'] = t.split('.')
+  return `${String(Number(h)).padStart(2, '0')}:${m.padEnd(2, '0')}`
 }
 
 function loadSchedule(
