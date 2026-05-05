@@ -1,290 +1,176 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { ScheduleData, WeekEvent } from '@syncu/types'
-import { fetchGroupSchedule, fetchGroups, type GroupSummary } from '../lib/api'
-import { addDays, formatDDMM, startOfWeek, weekParity } from '../lib/week'
+import { NavLink } from 'react-router-dom'
+import type { ClassSession, Course, WeekEvent, WeekSchedule } from '@syncu/types'
+import { Card, Button } from '@syncu/ui'
+import { fetchWeekSchedule } from '../lib/api'
+import { addDays, formatYMD, startOfWeek } from '../lib/week'
 import { WeekDatePicker } from '../components/WeekDatePicker'
 import { WeekGrid } from '../components/WeekGrid'
 import { PageShell } from './PageShell'
 
 /**
- * G-4 #2: Strona /week - WeekGrid podpiety pod GET /schedule/group/:groupId
- * + loading / error / empty states.
+ * G-5.3: Strona /week - WeekGrid podpiety pod GET /timetable/week.
  *
- * Backend zwraca ScheduleData (sections + lecturers). Plaszczymy entries
- * ze wszystkich subgrup wybranej grupy do jednej listy i karmimy nia WeekGrid.
+ * Backend (apps/api/src/handlers/timetable/index.ts) filtruje sessions po
+ * active semester i tygodniu. Zrodlo danych: tabela `class_sessions` zasilana
+ * importem (POST /timetable/import/confirm). Jezeli plan nie zostal jeszcze
+ * zaimportowany, sessions = [] -> pokazujemy empty state z CTA na /import.
  *
- * Wybor grupy zapisujemy w localStorage zeby nie pytac za kazdym razem.
+ * Wybor grupy nie jest juz potrzebny - backend wie kogo dotyczy plan
+ * (po seminarze docelowo per-user, na razie globalnie po active semester).
  */
 
-const LS_GROUP_KEY = 'syncu.selectedGroup'
-
 type State =
-  | { kind: 'loadingGroups' }
-  | { kind: 'noGroups'; reason: string }
-  | { kind: 'loadingSchedule'; groups: GroupSummary[]; selected: string }
-  | {
-      kind: 'loaded'
-      groups: GroupSummary[]
-      selected: string
-      data: ScheduleData
-    }
-  | {
-      kind: 'error'
-      groups: GroupSummary[]
-      selected: string
-      message: string
-    }
+  | { kind: 'loading' }
+  | { kind: 'loaded'; data: WeekSchedule }
+  | { kind: 'error'; message: string }
 
 export default function Week() {
-  const [state, setState] = useState<State>({ kind: 'loadingGroups' })
+  const [state, setState] = useState<State>({ kind: 'loading' })
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
-
-  // 1) Najpierw pobieramy liste grup
-  useEffect(() => {
-    let cancelled = false
-    fetchGroups()
-      .then((res) => {
-        if (cancelled) return
-        if (res.groups.length === 0) {
-          setState({
-            kind: 'noGroups',
-            reason: 'Backend nie zwrocil zadnych grup. Czy plan PK jest dostepny?',
-          })
-          return
-        }
-        // Wybieramy domyslna grupe: ostatnio wybrana albo pierwsza z listy.
-        // Backend matchuje po prefiksie (np. "12" -> "12_1", "12_2"),
-        // wiec uzywamy `groupId` (numer) jako klucza, nie pelnego `id`.
-        const stored = readStoredGroup(res.groups)
-        const selected = stored ?? String(res.groups[0].groupId)
-        loadSchedule(selected, res.groups, setState)
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setState({
-            kind: 'noGroups',
-            reason: err instanceof Error ? err.message : 'Nieznany blad',
-          })
-        }
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const weekDates = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
     [weekStart],
   )
 
-  // 2) Spluszczone wpisy → WeekEvent[] dla nowego WeekGrid
+  // Fetch przy zmianie weekStart
+  useEffect(() => {
+    let cancelled = false
+    setState({ kind: 'loading' })
+    fetchWeekSchedule(formatYMD(weekStart))
+      .then((data) => {
+        if (!cancelled) setState({ kind: 'loaded', data })
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setState({
+          kind: 'error',
+          message: err instanceof Error ? err.message : 'Nieznany blad',
+        })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [weekStart])
+
   const events = useMemo((): WeekEvent[] => {
     if (state.kind !== 'loaded') return []
-    const entries = state.data.sections.flatMap((s) => s.entries)
-    return entries.flatMap((entry, idx) => {
-      const day = weekDates.findIndex((d) => formatDDMM(d) === entry.date)
-      if (day === -1) return []
-      const { start, end } = parseTimeRange(entry.time)
-      return [{
-        id: idx,
-        title: entry.subject,
-        type: 'lecture' as const,
-        day: day as WeekEvent['day'],
-        startTime: start,
-        endTime: end,
-      }]
-    })
-  }, [state, weekDates])
+    return mapSessionsToEvents(state.data)
+  }, [state])
+
+  const isEmpty = state.kind === 'loaded' && events.length === 0
 
   return (
     <PageShell title="Week" subtitle="Plan zajec na tydzien">
-      {state.kind === 'loadingGroups' && (
-        <p style={{ color: '#6B7280' }}>Ladowanie listy grup...</p>
+      <WeekDatePicker weekStart={weekStart} onChange={setWeekStart} />
+
+      {state.kind === 'loading' && (
+        <p className="text-muted">Ladowanie planu tygodnia...</p>
       )}
 
-      {state.kind === 'noGroups' && (
-        <ErrorBox>
-          {state.reason}
-          <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#6B7280' }}>
-            Sprawdz, czy backend dziala (`bun run dev:api`) i ze API_URL ={' '}
-            <code>{import.meta.env.VITE_API_URL ?? 'http://localhost:3001'}</code>.
-          </div>
-        </ErrorBox>
+      {state.kind === 'error' && (
+        <ErrorBox
+          message={state.message}
+          onRetry={() => setWeekStart(new Date(weekStart))}
+        />
       )}
 
-      {(state.kind === 'loadingSchedule' ||
-        state.kind === 'loaded' ||
-        state.kind === 'error') && (
-        <>
-          <GroupSelector
-            groups={state.groups}
-            selected={state.selected}
-            onChange={(g) => {
-              writeStoredGroup(g)
-              loadSchedule(g, state.groups, setState)
-            }}
-          />
-          <WeekDatePicker weekStart={weekStart} onChange={setWeekStart} />
+      {isEmpty && <EmptyWeekState />}
 
-          {state.kind === 'loadingSchedule' && (
-            <p style={{ color: '#6B7280' }}>Ladowanie planu grupy...</p>
-          )}
-
-          {state.kind === 'error' && (
-            <ErrorBox>
-              {state.message}
-              <div style={{ marginTop: '0.75rem' }}>
-                <button
-                  type="button"
-                  style={retryBtn}
-                  onClick={() =>
-                    loadSchedule(state.selected, state.groups, setState)
-                  }
-                >
-                  Sprobuj ponownie
-                </button>
-              </div>
-            </ErrorBox>
-          )}
-
-          {state.kind === 'loaded' && (
-            <WeekGrid events={events} weekDates={weekDates} weekParity={weekParity(weekStart)} />
-          )}
-        </>
+      {state.kind === 'loaded' && events.length > 0 && (
+        <WeekGrid events={events} weekDates={weekDates} />
       )}
     </PageShell>
   )
 }
 
-/* --- helpers --- */
+/* --- mapowanie sessions -> WeekEvent --- */
 
-// Parsuje zakres "8.00-10.30" (format PK) → { start: "08:00", end: "10:30" }
-function parseTimeRange(range: string): { start: string; end: string } {
-  const [startRaw = '', endRaw = ''] = range.split('-').map((s) => s.trim())
-  return { start: dotTimeToColon(startRaw), end: dotTimeToColon(endRaw) }
+function mapSessionsToEvents(data: WeekSchedule): WeekEvent[] {
+  const coursesById = new Map<number, Course>(
+    data.courses.map((c) => [c.id, c]),
+  )
+
+  return data.sessions.map((s) => sessionToEvent(s, coursesById))
 }
 
-function dotTimeToColon(t: string): string {
-  const [h = '0', m = '00'] = t.split('.')
-  return `${String(Number(h)).padStart(2, '0')}:${m.padEnd(2, '0')}`
-}
+function sessionToEvent(
+  s: ClassSession,
+  coursesById: Map<number, Course>,
+): WeekEvent {
+  const start = new Date(s.startsAt)
+  const end = new Date(s.endsAt)
+  // JS getDay(): 0 = Nd, 1 = Pn, ..., 6 = Sob.
+  // WeekGrid expectuje: 0 = Pn, 6 = Nd. Konwersja:
+  const day = (((start.getDay() + 6) % 7)) as WeekEvent['day']
+  const course = coursesById.get(s.courseId)
 
-function loadSchedule(
-  groupId: string,
-  groups: GroupSummary[],
-  setState: React.Dispatch<React.SetStateAction<State>>,
-): void {
-  setState({ kind: 'loadingSchedule', groups, selected: groupId })
-  fetchGroupSchedule(groupId)
-    .then((data) => {
-      setState({ kind: 'loaded', groups, selected: groupId, data })
-    })
-    .catch((err) => {
-      setState({
-        kind: 'error',
-        groups,
-        selected: groupId,
-        message: err instanceof Error ? err.message : 'Nieznany blad',
-      })
-    })
-}
-
-function readStoredGroup(groups: GroupSummary[]): string | null {
-  try {
-    const v = localStorage.getItem(LS_GROUP_KEY)
-    if (!v) return null
-    const exists = groups.some((g) => String(g.groupId) === v)
-    return exists ? v : null
-  } catch {
-    return null
+  return {
+    id: s.id,
+    title: s.title || course?.name || 'Zajecia',
+    type: s.sessionType,
+    day,
+    startTime: formatHM(start),
+    endTime: formatHM(end),
+    room: s.room ?? course?.room ?? null,
+    lecturer: s.lecturerName ?? course?.lecturerName ?? null,
+    teamsLink: course?.meetingLink ?? null,
   }
 }
 
-function writeStoredGroup(value: string): void {
-  try {
-    localStorage.setItem(LS_GROUP_KEY, value)
-  } catch {
-    // ignore (private mode itd.)
-  }
+function formatHM(d: Date): string {
+  const h = d.getHours()
+  const m = d.getMinutes()
+  return `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`
 }
 
 /* --- subkomponenty --- */
 
-function GroupSelector({
-  groups,
-  selected,
-  onChange,
+/**
+ * G-5.5: Empty state. Mozliwe powody:
+ *  - user nie zaimportowal planu jeszcze
+ *  - w tym tygodniu po prostu nie ma zajec (zaocznie - dlatego kazdy tydzien
+ *    moze byc pusty)
+ * Pokazujemy uniwersalny komunikat + CTA na /import.
+ */
+function EmptyWeekState() {
+  return (
+    <Card variant="surface" padding="lg" className="text-center">
+      <h2 className="text-heading text-xl font-semibold mb-2">
+        Brak zajec w tym tygodniu
+      </h2>
+      <p className="text-muted mb-6">
+        Wybierz inny tydzien strzalkami powyzej, albo zaimportuj plan z Excela
+        jezeli jeszcze tego nie zrobiles.
+      </p>
+      <NavLink to="/import">
+        <Button variant="primary" size="md">
+          Zaimportuj plan
+        </Button>
+      </NavLink>
+    </Card>
+  )
+}
+
+function ErrorBox({
+  message,
+  onRetry,
 }: {
-  groups: GroupSummary[]
-  selected: string
-  onChange: (g: string) => void
+  message: string
+  onRetry: () => void
 }) {
-  // Unikalne groupId (po deduplikacji 12_1 / 12_2 -> jedno "12")
-  const uniqGroups = useMemo(() => {
-    const seen = new Set<string>()
-    const out: { id: string; label: string }[] = []
-    for (const g of groups) {
-      const id = String(g.groupId)
-      if (seen.has(id)) continue
-      seen.add(id)
-      out.push({ id, label: `${g.yearSemLabel} - Grupa ${id}` })
-    }
-    return out
-  }, [groups])
-
   return (
-    <label
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 4,
-        marginBottom: '1rem',
-        maxWidth: 360,
-      }}
+    <Card
+      variant="surface"
+      padding="md"
+      className="border border-danger/40 bg-danger/5 mb-4"
     >
-      <span style={{ fontSize: '0.85rem', color: '#6B7280' }}>Twoja grupa</span>
-      <select
-        value={selected}
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          padding: '0.5rem 0.75rem',
-          borderRadius: 6,
-          border: '1px solid #D1D5DB',
-        }}
-      >
-        {uniqGroups.map((g) => (
-          <option key={g.id} value={g.id}>
-            {g.label}
-          </option>
-        ))}
-      </select>
-    </label>
+      <p className="text-danger font-semibold mb-1">Blad</p>
+      <p className="text-muted text-sm mb-3">{message}</p>
+      <Button variant="secondary" size="sm" onClick={onRetry}>
+        Sprobuj ponownie
+      </Button>
+    </Card>
   )
-}
-
-function ErrorBox({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        border: '1px solid #FECACA',
-        background: '#FEF2F2',
-        color: '#991B1B',
-        borderRadius: 8,
-        padding: '1rem',
-        marginBottom: '1rem',
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-const retryBtn: React.CSSProperties = {
-  padding: '0.5rem 1rem',
-  background: 'white',
-  color: '#991B1B',
-  border: '1px solid #FCA5A5',
-  borderRadius: 6,
-  fontWeight: 500,
-  cursor: 'pointer',
 }
