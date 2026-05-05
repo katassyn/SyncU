@@ -25,6 +25,14 @@ export function formatDDMM(d: Date): string {
   return `${day}.${month < 10 ? '0' + month : month}`
 }
 
+/** Format ISO YYYY-MM-DD (np. "2026-05-04") - do query param przy GET /timetable/week. */
+export function formatYMD(d: Date): string {
+  const y = d.getFullYear()
+  const m = d.getMonth() + 1
+  const day = d.getDate()
+  return `${y}-${m < 10 ? '0' + m : m}-${day < 10 ? '0' + day : day}`
+}
+
 /** Pretty label, np. "17 - 23 marca 2026". */
 export function formatWeekLabel(weekStart: Date): string {
   const end = addDays(weekStart, 6)
