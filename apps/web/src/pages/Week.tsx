@@ -76,7 +76,12 @@ export default function Week() {
         />
       )}
 
-      {isEmpty && <EmptyWeekState />}
+      {isEmpty && (
+        <EmptyWeekState
+          onPrev={() => setWeekStart(addDays(weekStart, -7))}
+          onNext={() => setWeekStart(addDays(weekStart, 7))}
+        />
+      )}
 
       {state.kind === 'loaded' && events.length > 0 && (
         <WeekGrid events={events} weekDates={weekDates} />
@@ -128,27 +133,46 @@ function formatHM(d: Date): string {
 /* --- subkomponenty --- */
 
 /**
- * G-5.5: Empty state. Mozliwe powody:
- *  - user nie zaimportowal planu jeszcze
- *  - w tym tygodniu po prostu nie ma zajec (zaocznie - dlatego kazdy tydzien
- *    moze byc pusty)
- * Pokazujemy uniwersalny komunikat + CTA na /import.
+ * G-5.5: Empty state - "W tym tygodniu nie ma zajec".
+ *
+ * Edge case dla planu zaocznego: NIE kazdy weekend ma zajecia (terminarz PK
+ * obejmuje tylko wybrane soboty/niedziele). Ten stan to oczekiwana sytuacja,
+ * a nie blad - dlatego primary action to nawigacja po tygodniach
+ * (poprzedni/nastepny), a import planu jest sekundarna podpowiedzia
+ * dla user'ow ktorzy jeszcze nic nie zaimportowali.
  */
-function EmptyWeekState() {
+function EmptyWeekState({
+  onPrev,
+  onNext,
+}: {
+  onPrev: () => void
+  onNext: () => void
+}) {
   return (
     <Card variant="surface" padding="lg" className="text-center">
       <h2 className="text-heading text-xl font-semibold mb-2">
-        Brak zajec w tym tygodniu
+        W tym tygodniu nie ma zajec
       </h2>
-      <p className="text-muted mb-6">
-        Wybierz inny tydzien strzalkami powyzej, albo zaimportuj plan z Excela
-        jezeli jeszcze tego nie zrobiles.
+      <p className="text-muted mb-6 max-w-md mx-auto">
+        Plan studiow zaocznych nie obejmuje kazdego weekendu. Sprawdz sasiednie
+        tygodnie - tam pewnie cos jest.
       </p>
-      <NavLink to="/import">
-        <Button variant="primary" size="md">
-          Zaimportuj plan
+
+      <div className="flex gap-2 justify-center mb-8 flex-wrap">
+        <Button variant="secondary" size="md" onClick={onPrev}>
+          ← Poprzedni tydzien
         </Button>
-      </NavLink>
+        <Button variant="secondary" size="md" onClick={onNext}>
+          Nastepny tydzien →
+        </Button>
+      </div>
+
+      <p className="text-sm text-muted">
+        Nie zaimportowales jeszcze planu?{' '}
+        <NavLink to="/import" className="text-primary underline hover:text-primary-dark">
+          Wgraj go z Excela
+        </NavLink>
+      </p>
     </Card>
   )
 }
