@@ -5,6 +5,7 @@ import {
   type ParsedTimetable,
   type ScheduleSection,
 } from '@syncu/core'
+import { Button, Card } from '@syncu/ui'
 import { PageShell } from './PageShell'
 
 /**
@@ -12,8 +13,8 @@ import { PageShell } from './PageShell'
  *  - upload .xlsx (drag&drop albo input file)
  *  - parsowanie przez `importTimetable` z @syncu/core
  *  - preview: dropdown wyboru grupy + tabela wpisow
- *  - przycisk "Zapisz" -> confirmImport() -> POST do api (mock dopoki Kamil
- *    nie ma BACK-08).
+ *  - przycisk "Zapisz" -> confirmImport() -> POST do api (mock dopoki Maks
+ *    nie zrobi G-5.6 - wpiecia pod realne /timetable/import + /import/confirm).
  */
 
 type Phase =
@@ -23,16 +24,6 @@ type Phase =
   | { kind: 'error'; message: string }
   | { kind: 'saving' }
   | { kind: 'saved' }
-
-const dropZoneStyle = (active: boolean): React.CSSProperties => ({
-  border: `2px dashed ${active ? '#4F46E5' : '#D1D5DB'}`,
-  borderRadius: 12,
-  padding: '3rem 2rem',
-  textAlign: 'center',
-  background: active ? '#EEF2FF' : '#FAFAFA',
-  cursor: 'pointer',
-  transition: 'all 120ms ease',
-})
 
 export default function ImportPage() {
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' })
@@ -72,13 +63,8 @@ export default function ImportPage() {
   async function confirmImport(section: ScheduleSection) {
     setPhase({ kind: 'saving' })
     try {
-      // TODO: prawdziwy endpoint Kamila (BACK-08), na razie mock.
-      // const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
-      // await fetch(`${apiUrl}/timetable/import`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ sectionId: section.id, entries: section.entries }),
-      // })
+      // TODO (G-5.6): prawdziwy POST do /timetable/import + /timetable/import/confirm.
+      // Endpointy juz dostepne na main, brakuje wpiecia po stronie frontu.
       console.log('[confirmImport] TODO: wyslij do API', {
         sectionId: section.id,
         groupId: section.groupId,
@@ -86,7 +72,6 @@ export default function ImportPage() {
       })
       await new Promise((r) => setTimeout(r, 400)) // udajemy network
       setPhase({ kind: 'saved' })
-      // krotki delay zeby user zobaczyl "Zapisane", potem na today
       setTimeout(() => navigate('/today'), 800)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Nieznany blad zapisu'
@@ -100,8 +85,8 @@ export default function ImportPage() {
       subtitle="Wgraj plan zajec z pliku .xls / .xlsx (format Politechniki Krakowskiej)"
     >
       {phase.kind === 'idle' && (
-        <div
-          style={dropZoneStyle(dragActive)}
+        <DropZone
+          dragActive={dragActive}
           onClick={() => fileInputRef.current?.click()}
           onDragEnter={(e) => {
             e.preventDefault()
@@ -111,76 +96,107 @@ export default function ImportPage() {
           onDragLeave={() => setDragActive(false)}
           onDrop={onDrop}
         >
-          <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-            Upusc plik tutaj albo kliknij, zeby wybrac
-          </p>
-          <p style={{ color: '#6B7280', fontSize: '0.9rem' }}>
-            akceptowane: .xls, .xlsx
-          </p>
           <input
             ref={fileInputRef}
             type="file"
             accept=".xls,.xlsx"
             onChange={onInputChange}
-            style={{ display: 'none' }}
+            className="hidden"
           />
-        </div>
+        </DropZone>
       )}
 
-      {phase.kind === 'parsing' && <p>Parsowanie pliku...</p>}
+      {phase.kind === 'parsing' && (
+        <p className="text-muted">Parsowanie pliku...</p>
+      )}
 
       {phase.kind === 'error' && (
-        <div
-          style={{
-            border: '1px solid #FECACA',
-            background: '#FEF2F2',
-            color: '#991B1B',
-            borderRadius: 8,
-            padding: '1rem',
-          }}
+        <Card
+          variant="surface"
+          padding="md"
+          className="border border-danger/40 bg-danger/5 mb-4"
         >
-          <strong>Blad: </strong>
-          {phase.message}
-          <div style={{ marginTop: '1rem' }}>
-            <button
-              type="button"
-              onClick={() => setPhase({ kind: 'idle' })}
-              style={btnSecondaryStyle}
-            >
-              Sprobuj ponownie
-            </button>
-          </div>
-        </div>
+          <p className="text-danger font-semibold mb-1">Blad importu</p>
+          <p className="text-muted text-ui mb-4">{phase.message}</p>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setPhase({ kind: 'idle' })}
+          >
+            Sprobuj ponownie
+          </Button>
+        </Card>
       )}
 
       {phase.kind === 'parsed' && (
         <ParsedPreview
           data={phase.data}
           selectedId={phase.selectedSectionId}
-          onSelect={(id) =>
-            setPhase({ ...phase, selectedSectionId: id })
-          }
+          onSelect={(id) => setPhase({ ...phase, selectedSectionId: id })}
           onConfirm={(section) => confirmImport(section)}
           onCancel={() => setPhase({ kind: 'idle' })}
         />
       )}
 
-      {phase.kind === 'saving' && <p>Zapisywanie...</p>}
+      {phase.kind === 'saving' && (
+        <p className="text-muted">Zapisywanie...</p>
+      )}
 
       {phase.kind === 'saved' && (
-        <div
-          style={{
-            border: '1px solid #BBF7D0',
-            background: '#F0FDF4',
-            color: '#166534',
-            borderRadius: 8,
-            padding: '1rem',
-          }}
+        <Card
+          variant="surface"
+          padding="md"
+          className="border border-success/40 bg-success/5"
         >
-          Plan zapisany. Przekierowuje na <strong>Today</strong>...
-        </div>
+          <p className="text-success font-semibold">
+            Plan zapisany. Przekierowuje na <strong>Today</strong>...
+          </p>
+        </Card>
       )}
     </PageShell>
+  )
+}
+
+/* --- drop zone --- */
+
+function DropZone({
+  dragActive,
+  children,
+  onClick,
+  onDragEnter,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+}: {
+  dragActive: boolean
+  children?: React.ReactNode
+  onClick: () => void
+  onDragEnter: (e: React.DragEvent) => void
+  onDragOver: (e: React.DragEvent) => void
+  onDragLeave: () => void
+  onDrop: (e: React.DragEvent) => void
+}) {
+  return (
+    <div
+      onClick={onClick}
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      className={[
+        'border-2 border-dashed rounded-card-lg p-12 text-center cursor-pointer',
+        'transition-colors duration-150',
+        dragActive
+          ? 'border-primary bg-primary-light'
+          : 'border-border-subtle bg-surface-1 hover:bg-surface-2',
+      ].join(' ')}
+    >
+      <p className="text-h3 text-heading mb-1">
+        Upusc plik tutaj albo kliknij, zeby wybrac
+      </p>
+      <p className="text-muted text-ui">akceptowane: .xls, .xlsx</p>
+      {children}
+    </div>
   )
 }
 
@@ -202,29 +218,16 @@ function ParsedPreview({
   const section = data.sections.find((s) => s.id === selectedId)
 
   return (
-    <div>
-      <div
-        style={{
-          display: 'flex',
-          gap: '1rem',
-          alignItems: 'center',
-          marginBottom: '1rem',
-          flexWrap: 'wrap',
-        }}
-      >
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontSize: '0.85rem', color: '#6B7280' }}>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end gap-4">
+        <label className="flex flex-col gap-1.5 min-w-[280px]">
+          <span className="text-caption font-bold text-body tracking-label uppercase">
             Wybierz swoja grupe
           </span>
           <select
             value={selectedId}
             onChange={(e) => onSelect(e.target.value)}
-            style={{
-              padding: '0.5rem 0.75rem',
-              borderRadius: 6,
-              border: '1px solid #D1D5DB',
-              minWidth: 280,
-            }}
+            className="bg-surface-1 rounded-pill px-4 py-2.5 text-ui text-heading border border-transparent focus:outline-none focus:border-primary focus:bg-white transition-colors"
           >
             {data.sections.map((s) => (
               <option key={s.id} value={s.id}>
@@ -233,73 +236,61 @@ function ParsedPreview({
             ))}
           </select>
         </label>
-        <div style={{ marginLeft: 'auto', color: '#6B7280', fontSize: '0.85rem' }}>
-          Sekcji: <strong>{data.sections.length}</strong> | Prowadzacych:{' '}
-          <strong>{data.lecturers.length}</strong>
-        </div>
+        <p className="ml-auto text-muted text-caption">
+          Sekcji: <strong className="text-heading">{data.sections.length}</strong>
+          {' | '}
+          Prowadzacych:{' '}
+          <strong className="text-heading">{data.lecturers.length}</strong>
+        </p>
       </div>
 
       {section && (
         <>
-          <div
-            style={{
-              maxHeight: 360,
-              overflow: 'auto',
-              border: '1px solid #E5E7EB',
-              borderRadius: 8,
-            }}
-          >
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ background: '#F9FAFB', position: 'sticky', top: 0 }}>
-                <tr>
-                  <Th>Data</Th>
-                  <Th>Godzina</Th>
-                  <Th>Zajecia</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {section.entries.map((e, i) => (
-                  <tr
-                    key={`${e.date}-${e.time}-${i}`}
-                    style={{ borderTop: '1px solid #F3F4F6' }}
-                  >
-                    <Td>{e.date}</Td>
-                    <Td>{e.time}</Td>
-                    <Td>{e.subject}</Td>
-                  </tr>
-                ))}
-                {section.entries.length === 0 && (
+          <Card variant="surface" padding="none" className="overflow-hidden">
+            <div className="max-h-[360px] overflow-auto">
+              <table className="w-full border-collapse">
+                <thead className="bg-surface-2 sticky top-0">
                   <tr>
-                    <Td colSpan={3}>
-                      <em style={{ color: '#9CA3AF' }}>
-                        Brak wpisow dla tej grupy
-                      </em>
-                    </Td>
+                    <Th>Data</Th>
+                    <Th>Godzina</Th>
+                    <Th>Zajecia</Th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {section.entries.map((e, i) => (
+                    <tr
+                      key={`${e.date}-${e.time}-${i}`}
+                      className="border-t border-border-subtle"
+                    >
+                      <Td>{e.date}</Td>
+                      <Td>{e.time}</Td>
+                      <Td>{e.subject}</Td>
+                    </tr>
+                  ))}
+                  {section.entries.length === 0 && (
+                    <tr>
+                      <Td colSpan={3}>
+                        <em className="text-muted">Brak wpisow dla tej grupy</em>
+                      </Td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
 
-          <div
-            style={{
-              display: 'flex',
-              gap: '0.75rem',
-              marginTop: '1rem',
-              justifyContent: 'flex-end',
-            }}
-          >
-            <button type="button" onClick={onCancel} style={btnSecondaryStyle}>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" size="md" onClick={onCancel}>
               Anuluj
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
               onClick={() => onConfirm(section)}
               disabled={section.entries.length === 0}
-              style={btnPrimaryStyle(section.entries.length === 0)}
             >
               Zapisz ({section.entries.length} zajec)
-            </button>
+            </Button>
           </div>
         </>
       )}
@@ -309,14 +300,7 @@ function ParsedPreview({
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th
-      style={{
-        padding: '0.5rem 0.75rem',
-        textAlign: 'left',
-        fontSize: '0.85rem',
-        color: '#374151',
-      }}
-    >
+    <th className="px-3 py-2 text-left text-caption font-semibold text-body uppercase tracking-label">
       {children}
     </th>
   )
@@ -330,28 +314,8 @@ function Td({
   colSpan?: number
 }) {
   return (
-    <td colSpan={colSpan} style={{ padding: '0.5rem 0.75rem', fontSize: '0.9rem' }}>
+    <td colSpan={colSpan} className="px-3 py-2 text-ui text-heading">
       {children}
     </td>
   )
-}
-
-const btnPrimaryStyle = (disabled: boolean): React.CSSProperties => ({
-  padding: '0.6rem 1.2rem',
-  background: disabled ? '#A5B4FC' : '#4F46E5',
-  color: 'white',
-  border: 'none',
-  borderRadius: 8,
-  fontWeight: 600,
-  cursor: disabled ? 'not-allowed' : 'pointer',
-})
-
-const btnSecondaryStyle: React.CSSProperties = {
-  padding: '0.6rem 1.2rem',
-  background: 'white',
-  color: '#374151',
-  border: '1px solid #D1D5DB',
-  borderRadius: 8,
-  fontWeight: 500,
-  cursor: 'pointer',
 }
