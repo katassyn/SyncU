@@ -1,270 +1,391 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import type { ScheduleEntry } from '@syncu/types'
-import { Button, Card } from '@syncu/ui'
-import { fetchGroupSchedule, fetchGroups, type GroupSummary } from '../lib/api'
-import { PageShell } from './PageShell'
+import { useEffect, useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import type { ScheduleEntry } from '@syncu/types';
+import { fetchGroupSchedule } from '../lib/api';
+import { addDays, formatDDMM } from '../lib/week';
 
-/**
- * G-3 #1 + "Today fancy" (po revertcie do /schedule/*):
- *
- * Pokazujemy 3 najblizsze nadchodzace zajecia ze wspolnego planu PK
- * (z `/schedule/group/:id`), filtrujac wpisy ktorych start >= teraz.
- *
- * Zrodlo: identyczne jak w /week (publiczny plan auto-wypelniany przez backend
- * z PK URL). Wybor grupy synchronizujemy z localStorage `syncu.selectedGroup`,
- * ktory zapisuje /week.
- */
+// --------------- typy ---------------
 
-const LS_GROUP_KEY = 'syncu.selectedGroup'
-
-type State =
+type ScheduleState =
+  | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'noGroup' } // grup nie ma w ogole na backendzie
-  | { kind: 'loaded'; entries: UpcomingEntry[] }
-  | { kind: 'error'; message: string }
+  | { kind: 'loaded'; allEntries: ScheduleEntry[] }
+  | { kind: 'error' }
 
-type UpcomingEntry = ScheduleEntry & {
-  startsAt: Date
-  endsAt: Date
+// --------------- placeholder data ---------------
+
+const placeholderSessions = [
+  {
+    id: 'p1',
+    title: 'Zaawansowana Mechanika Kwantowa',
+    label: 'Wykład',
+    time: '08:00–09:30',
+    room: 'B-4/21',
+    accent: 'border-primary',
+    badge: 'bg-primary-light text-primary-nav',
+  },
+  {
+    id: 'p2',
+    title: 'Grupowe: Etyka w AI',
+    label: 'Seminarium',
+    time: '11:00–12:30',
+    room: 'Online',
+    accent: 'border-muted',
+    badge: 'bg-surface-2 text-muted',
+  },
+  {
+    id: 'p3',
+    title: 'Złóż propozycję badawczą',
+    label: 'Zadanie',
+    time: 'Cały dzień',
+    room: null,
+    accent: 'border-[#c07a20]',
+    badge: 'bg-[rgba(192,122,32,.1)] text-[#c07a20]',
+  },
+];
+
+const deadlines = [
+  { id: 1, title: 'Midterm: Rachunek III',      when: 'za 2 dni', urgent: true  },
+  { id: 2, title: 'Kolokwium: Sieci Neuronowe', when: '29 paź',   urgent: false },
+  { id: 3, title: 'Szkic pracy dyplomowej',     when: '4 lis',    urgent: false },
+];
+
+const studyProgress = [
+  { subject: 'Fizyka',     percent: 75 },
+  { subject: 'Etyka',      percent: 40 },
+  { subject: 'Matematyka', percent: 90 },
+];
+
+const resources = [
+  { id: 1, title: 'Kwantowe Tunelowanie — Notatki', kind: 'PDF',   author: 'Jan K.', live: false },
+  { id: 2, title: 'Etyka AI — Mapa myśli',          kind: 'BOARD', author: 'Zespół', live: true  },
+];
+
+// --------------- helpers ---------------
+
+function parseDDMM(ddmm: string): Date {
+  const [d, m] = ddmm.split('.').map(Number);
+  return new Date(new Date().getFullYear(), m - 1, d);
 }
 
-export default function Today() {
-  const navigate = useNavigate()
-  const [state, setState] = useState<State>({ kind: 'loading' })
+function dayName(date: Date): string {
+  return date.toLocaleDateString('pl-PL', { weekday: 'long' });
+}
 
-  useEffect(() => {
-    let cancelled = false
-    const now = new Date()
-
-    fetchGroups()
-      .then(async (groupsRes) => {
-        if (cancelled) return
-        if (groupsRes.groups.length === 0) {
-          setState({ kind: 'noGroup' })
-          return
-        }
-        const stored = readStoredGroup(groupsRes.groups)
-        // Default = pierwsza podgrupa po sortowaniu (rocznik/grupa/podgrupa)
-        const sortedFirst = [...groupsRes.groups].sort((a, b) => {
-          const ag = Number(a.groupId)
-          const bg = Number(b.groupId)
-          if (ag !== bg) return ag - bg
-          return a.id.localeCompare(b.id)
-        })[0]
-        const selected = stored ?? sortedFirst.id
-        const data = await fetchGroupSchedule(selected)
-        if (cancelled) return
-
-        const upcoming = pickUpcoming(
-          data.sections.flatMap((s) => s.entries),
-          now,
-          3,
-        )
-        setState({ kind: 'loaded', entries: upcoming })
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setState({
-            kind: 'error',
-            message: err instanceof Error ? err.message : 'Nieznany blad',
-          })
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
+function CircularProgress({ subject, percent }: { subject: string; percent: number }) {
+  const r = 28;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - percent / 100);
   return (
-    <PageShell
-      title="Today"
-      subtitle="Najblizsze zajecia + kolokwia + zadania nauki"
-    >
-      {state.kind === 'loading' && (
-        <p className="text-muted">Ladowanie...</p>
-      )}
-
-      {state.kind === 'error' && (
-        <Card
-          variant="surface"
-          padding="md"
-          className="border border-danger/40 bg-danger/5"
-        >
-          <p className="text-danger font-semibold mb-1">Blad</p>
-          <p className="text-muted text-ui">{state.message}</p>
-        </Card>
-      )}
-
-      {state.kind === 'noGroup' && (
-        <EmptyState
-          headline="Nie ma planu do wyswietlenia"
-          message="Backend nie zwrocil zadnych grup. Sprobuj zaimportowac wlasny plan."
-          onImport={() => navigate('/import')}
-        />
-      )}
-
-      {state.kind === 'loaded' && state.entries.length === 0 && (
-        <EmptyState
-          headline="Brak zaplanowanych zajec"
-          message="Nie masz juz zajec w biezacym tygodniu. Sprawdz pelny plan w widoku Week."
-          onImport={() => navigate('/week')}
-          ctaLabel="Pelny plan tygodnia"
-        />
-      )}
-
-      {state.kind === 'loaded' && state.entries.length > 0 && (
-        <UpcomingList entries={state.entries} />
-      )}
-    </PageShell>
-  )
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative size-18">
+        <svg className="size-full -rotate-90" viewBox="0 0 72 72">
+          <circle cx="36" cy="36" r={r} className="text-surface-2" fill="none" stroke="currentColor" strokeWidth="8" />
+          <circle
+            cx="36" cy="36" r={r}
+            className="text-primary"
+            fill="none" stroke="currentColor" strokeWidth="8"
+            strokeDasharray={circ}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+          />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center text-badge font-bold text-heading">
+          {percent}%
+        </span>
+      </div>
+      <span className="text-badge text-muted">{subject}</span>
+    </div>
+  );
 }
 
-/* --- helpers --- */
+// --------------- sekcja "Dzisiaj" ---------------
 
-function readStoredGroup(groups: GroupSummary[]): string | null {
-  try {
-    const v = localStorage.getItem(LS_GROUP_KEY)
-    if (!v) return null
-    return groups.some((g) => g.id === v) ? v : null
-  } catch {
-    return null
-  }
-}
-
-/**
- * Bierze entries (PK format: date "DD.MM", time "8.00-10.30"), dopasowuje rok
- * (zakladajac rok biezacy / nastepny dla daty bliskiej Stycznia), filtruje
- * `startsAt >= now`, sortuje i zwraca top N.
- */
-function pickUpcoming(
-  entries: ScheduleEntry[],
-  now: Date,
-  limit: number,
-): UpcomingEntry[] {
-  const upcoming: UpcomingEntry[] = []
-
-  for (const entry of entries) {
-    const startsAt = parseEntryDateTime(entry.date, entry.time, 'start', now)
-    const endsAt = parseEntryDateTime(entry.date, entry.time, 'end', now)
-    if (!startsAt || !endsAt) continue
-    if (startsAt.getTime() < now.getTime()) continue
-    upcoming.push({ ...entry, startsAt, endsAt })
+function TodaySessionsList({ state, todayEntries }: { state: ScheduleState; todayEntries: ScheduleEntry[] }) {
+  if (state.kind === 'loading') {
+    return (
+      <div className="flex flex-col gap-3">
+        {[0, 1, 2].map(i => (
+          <div key={i} className="h-16 rounded-card-sm bg-surface-1 animate-pulse" />
+        ))}
+      </div>
+    );
   }
 
-  upcoming.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
-  return upcoming.slice(0, limit)
-}
+  if (state.kind === 'loaded') {
+    if (todayEntries.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-8 gap-3">
+          <p className="text-body text-muted text-center m-0">Brak zajęć na dziś.</p>
+          <NavLink to="/import" className="text-badge font-bold text-primary-nav hover:underline">
+            Zaimportuj plan →
+          </NavLink>
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col gap-3">
+        {todayEntries.map((e, i) => (
+          <div key={i} className="flex items-center gap-4 px-4 py-3 rounded-card-sm bg-surface-1 border-l-[3px] border-primary">
+            <div className="flex-1 min-w-0">
+              <span className="text-badge text-muted block mb-1">{e.time}</span>
+              <p className="text-body font-semibold text-heading m-0 truncate">{e.subject}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
-function parseEntryDateTime(
-  ddmm: string,
-  timeRange: string,
-  which: 'start' | 'end',
-  now: Date,
-): Date | null {
-  // ddmm = "17.03"
-  const dateMatch = ddmm.match(/^(\d{1,2})\.(\d{1,2})$/)
-  if (!dateMatch) return null
-  const day = Number(dateMatch[1])
-  const month = Number(dateMatch[2])
-
-  const parts = timeRange.split('-').map((s) => s.trim())
-  const timePart = which === 'start' ? parts[0] : parts[1]
-  if (!timePart) return null
-  const tMatch = timePart.match(/^(\d{1,2})[.:](\d{1,2})$/)
-  if (!tMatch) return null
-  const hour = Number(tMatch[1])
-  const minute = Number(tMatch[2])
-
-  // Heurystyka roku: zakladamy biezacy rok; jezeli data wypadnie w przeszlosci
-  // wzgledem dzisiaj o wiecej niz 6 miesiecy, prawdopodobnie chodzi o nastepny rok.
-  const year = pickYear(month, day, now)
-  return new Date(year, month - 1, day, hour, minute, 0, 0)
-}
-
-function pickYear(month: number, day: number, now: Date): number {
-  const candidate = new Date(now.getFullYear(), month - 1, day)
-  const diffMonths =
-    (candidate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30)
-  if (diffMonths < -6) return now.getFullYear() + 1
-  return now.getFullYear()
-}
-
-const DAY_NAMES = [
-  'Niedziela',
-  'Poniedzialek',
-  'Wtorek',
-  'Sroda',
-  'Czwartek',
-  'Piatek',
-  'Sobota',
-]
-
-function dayLabel(d: Date, now: Date): string {
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  const diff = Math.round((target.getTime() - today.getTime()) / 86_400_000)
-  if (diff === 0) return 'Dzis'
-  if (diff === 1) return 'Jutro'
-  if (diff > 1 && diff < 7) return DAY_NAMES[d.getDay()]
-  const day = d.getDate()
-  const month = d.getMonth() + 1
-  return `${day}.${month < 10 ? '0' + month : month}`
-}
-
-function formatHM(d: Date): string {
-  const h = d.getHours()
-  const m = d.getMinutes()
-  return `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`
-}
-
-/* --- subkomponenty --- */
-
-function UpcomingList({ entries }: { entries: UpcomingEntry[] }) {
-  const now = new Date()
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-h3 text-heading font-semibold">
-        Najblizsze zajecia ({entries.length})
-      </h2>
-      {entries.map((e, i) => (
-        <Card
-          key={`${e.date}-${e.time}-${i}`}
-          variant="white"
-          padding="md"
-        >
-          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
-            <h3 className="text-h3 text-heading font-semibold">{e.subject}</h3>
-            <span className="text-caption text-muted uppercase tracking-label">
-              {dayLabel(e.startsAt, now)} · {formatHM(e.startsAt)}–{formatHM(e.endsAt)}
-            </span>
+      {placeholderSessions.map(s => (
+        <div key={s.id} className={['flex items-center gap-4 px-4 py-3 rounded-card-sm bg-surface-1 border-l-[3px]', s.accent].join(' ')}>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <span className={['text-badge font-bold uppercase tracking-badge rounded-pill px-2 py-0.5', s.badge].join(' ')}>
+                {s.label}
+              </span>
+              <span className="text-badge text-muted">{s.time}</span>
+              {s.room && <span className="text-badge text-muted">· {s.room}</span>}
+            </div>
+            <p className="text-body font-semibold text-heading m-0 truncate">{s.title}</p>
           </div>
-          <p className="text-ui text-muted">{e.date}</p>
-        </Card>
+        </div>
       ))}
     </div>
-  )
+  );
 }
 
-function EmptyState({
-  headline,
-  message,
-  onImport,
-  ctaLabel = 'Zaimportuj plan',
-}: {
-  headline: string
-  message: string
-  onImport: () => void
-  ctaLabel?: string
-}) {
+// --------------- sekcja "Nadchodzące zajęcia" ---------------
+
+function UpcomingList({ state, entries }: { state: ScheduleState; entries: ScheduleEntry[] }) {
+  if (state.kind === 'idle') return null;
+
+  if (state.kind === 'loading') {
+    return (
+      <div className="bg-white rounded-card-lg shadow-card-sm p-6 flex flex-col gap-4 mt-5">
+        <p className="text-h3 font-bold text-heading m-0">Nadchodzące zajęcia</p>
+        <div className="flex flex-col gap-3">
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className="h-14 rounded-card-sm bg-surface-1 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (state.kind === 'error' || entries.length === 0) return null;
+
   return (
-    <Card variant="surface" padding="lg" className="text-center">
-      <h2 className="text-h2 text-heading font-semibold mb-2">{headline}</h2>
-      <p className="text-muted mb-6 max-w-md mx-auto">{message}</p>
-      <Button variant="primary" size="md" onClick={onImport}>
-        {ctaLabel}
-      </Button>
-    </Card>
-  )
+    <div className="bg-white rounded-card-lg shadow-card-sm p-6 flex flex-col gap-1 mt-5">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-h3 font-bold text-heading m-0">Nadchodzące zajęcia</p>
+        <span className="text-badge text-muted">Najbliższe 7 dni</span>
+      </div>
+
+      {entries.map((e, i) => {
+        const date = parseDDMM(e.date);
+        return (
+          <div key={i} className="flex items-start justify-between gap-4 py-3 border-b border-border-subtle last:border-0">
+            <div className="flex-1 min-w-0">
+              <p className="text-body font-semibold text-heading m-0 leading-snug">{e.subject}</p>
+              <span className="text-badge text-muted capitalize">
+                {dayName(date)} · {e.time}
+              </span>
+            </div>
+            <span className="text-badge font-bold text-muted shrink-0 tabular-nums pt-0.5">{e.date}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// --------------- main ---------------
+
+export default function Today() {
+  // Inicjalizacja od razu jako 'loading' jeśli jest zapisana grupa — bez synchronicznego setState w efekcie
+  const [scheduleState, setScheduleState] = useState<ScheduleState>(() =>
+    localStorage.getItem('syncu.selectedGroup') ? { kind: 'loading' } : { kind: 'idle' }
+  );
+
+  useEffect(() => {
+    const groupId = localStorage.getItem('syncu.selectedGroup');
+    if (!groupId) return;
+
+    let cancelled = false;
+    fetchGroupSchedule(groupId)
+      .then(data => {
+        if (cancelled) return;
+        const allEntries = data.sections
+          .flatMap(s => s.entries)
+          .sort((a, b) => parseDDMM(a.date).getTime() - parseDDMM(b.date).getTime() || a.time.localeCompare(b.time));
+        setScheduleState({ kind: 'loaded', allEntries });
+      })
+      .catch(() => {
+        if (!cancelled) setScheduleState({ kind: 'error' });
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayDDMM = formatDDMM(today);
+  const in7days = addDays(today, 7);
+
+  const todayEntries =
+    scheduleState.kind === 'loaded'
+      ? scheduleState.allEntries.filter(e => e.date === todayDDMM)
+      : [];
+
+  const upcomingEntries =
+    scheduleState.kind === 'loaded'
+      ? scheduleState.allEntries.filter(e => {
+          const d = parseDDMM(e.date);
+          return d > today && d <= in7days;
+        })
+      : [];
+
+  const sessionCount =
+    scheduleState.kind === 'loaded' ? todayEntries.length : 4;
+
+  const dateLabel = today.toLocaleDateString('pl-PL', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  });
+
+  return (
+    <div className="px-8 py-8">
+
+      {/* Powitanie */}
+      <div className="mb-8">
+        <p className="text-display font-extrabold text-heading m-0 leading-none">
+          Dzień dobry, Alex.
+        </p>
+        <p className="text-h3 text-muted mt-2 mb-0">
+          Masz <span className="font-bold text-primary-nav">{sessionCount} zajęć</span> dzisiaj.
+        </p>
+      </div>
+
+      {/* Bento grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+        {/* Dzisiaj — 8 kolumn */}
+        <div className="lg:col-span-8 bg-white rounded-card-lg shadow-card-sm p-6 flex flex-col gap-5">
+          <div className="flex items-center justify-between">
+            <p className="text-h3 font-bold text-heading m-0">Dzisiaj</p>
+            <span className="text-badge text-muted capitalize">{dateLabel}</span>
+          </div>
+          <TodaySessionsList state={scheduleState} todayEntries={todayEntries} />
+        </div>
+
+        {/* Terminy — 4 kolumny */}
+        <div className="lg:col-span-4 bg-white rounded-card-lg shadow-card-sm p-6 flex flex-col gap-5">
+          <p className="text-h3 font-bold text-heading m-0">Terminy</p>
+          <div className="flex flex-col flex-1">
+            {deadlines.map((d, i) => (
+              <div key={d.id} className="flex items-start gap-3">
+                <div className="flex flex-col items-center shrink-0 pt-1">
+                  <div className={['size-2 rounded-full shrink-0', d.urgent ? 'bg-danger' : 'bg-primary'].join(' ')} />
+                  {i < deadlines.length - 1 && (
+                    <div className="w-px bg-border-subtle mt-1" style={{ height: '2.5rem' }} />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 pb-4 last:pb-0">
+                  <p className="text-body font-semibold text-heading m-0 leading-tight truncate">{d.title}</p>
+                  <span className={['text-badge font-bold mt-0.5 inline-block', d.urgent ? 'text-danger' : 'text-muted'].join(' ')}>
+                    {d.when}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <NavLink
+            to="/week"
+            className="flex items-center justify-center text-badge font-bold uppercase tracking-badge text-primary-nav bg-primary-light hover:bg-primary hover:text-on-primary rounded-pill py-2.5 transition-colors"
+          >
+            Pełny kalendarz
+          </NavLink>
+        </div>
+
+        {/* Postęp nauki — 5 kolumn */}
+        <div className="lg:col-span-5 bg-white rounded-card-lg shadow-card-sm p-6 flex flex-col gap-6">
+          <p className="text-h3 font-bold text-heading m-0">Postęp nauki</p>
+          <div className="flex items-center justify-around gap-4">
+            {studyProgress.map(p => (
+              <CircularProgress key={p.subject} subject={p.subject} percent={p.percent} />
+            ))}
+          </div>
+        </div>
+
+        {/* Wspólne zasoby — 7 kolumn */}
+        <div className="lg:col-span-7 bg-white rounded-card-lg shadow-card-sm p-6 flex flex-col gap-4">
+          <p className="text-h3 font-bold text-heading m-0">Wspólne zasoby</p>
+          <div className="flex flex-col gap-3">
+            {resources.map(r => (
+              <div key={r.id} className="flex items-center gap-4 p-4 rounded-card-sm bg-surface-1 hover:bg-surface-2 transition-colors cursor-pointer">
+                <div className={['size-10 rounded-card-sm flex items-center justify-center shrink-0', r.kind === 'PDF' ? 'bg-[rgba(168,56,54,.08)] text-danger' : 'bg-primary-light text-primary-nav'].join(' ')}>
+                  {r.kind === 'PDF' ? <PdfIcon /> : <BoardIcon />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-body font-semibold text-heading m-0 truncate">{r.title}</p>
+                  <span className="text-badge text-muted">{r.author}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {r.live && (
+                    <span className="flex items-center gap-1 text-badge font-bold uppercase tracking-badge bg-[rgba(168,56,54,.08)] text-danger rounded-pill px-2 py-0.5">
+                      <span className="size-1.5 rounded-full bg-danger animate-pulse" />
+                      Na żywo
+                    </span>
+                  )}
+                  <span className="text-badge font-bold text-muted uppercase tracking-badge">{r.kind}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
+      {/* Nadchodzące zajęcia */}
+      <UpcomingList state={scheduleState} entries={upcomingEntries} />
+
+      {/* FAB */}
+      <button
+        aria-label="Dodaj"
+        className="fixed bottom-6 right-6 size-16 rounded-pill bg-primary text-on-primary shadow-fab flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer z-50"
+      >
+        <PlusIcon />
+      </button>
+    </div>
+  );
+}
+
+// --------------- icons ---------------
+
+function PdfIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M5 2h7l4 4v12a1 1 0 01-1 1H5a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M12 2v4h4M7 10h6M7 13h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BoardIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <rect x="2" y="2" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M6 7h8M6 10h5M6 13h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
 }
