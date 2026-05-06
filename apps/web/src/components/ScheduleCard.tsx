@@ -7,11 +7,14 @@ interface ScheduleCardProps {
   rowSpan: number;
 }
 
+// Krotkie labelki - dziala w waskich kolumnach kalendarza bez ucinania.
+// Pelne nazwy (Wykład, Projekt, Seminarium, Egzamin) sa za dlugie na badge
+// w typowej kolumnie tygodnia.
 const TYPE_CONFIG: Record<ClassSessionType, { card: string; badge: string; label: string }> = {
   lecture: {
     card:  'bg-primary-light border-primary',
     badge: 'bg-primary/15 text-primary-nav',
-    label: 'Wykład',
+    label: 'Wyk.',
   },
   lab: {
     card:  'bg-surface-2 border-muted',
@@ -21,17 +24,17 @@ const TYPE_CONFIG: Record<ClassSessionType, { card: string; badge: string; label
   project: {
     card:  'bg-surface-3 border-border-subtle',
     badge: 'bg-surface-1 text-heading',
-    label: 'Projekt',
+    label: 'Proj.',
   },
   seminar: {
     card:  'bg-surface-1 border-border-subtle',
     badge: 'bg-surface-2 text-muted',
-    label: 'Seminarium',
+    label: 'Sem.',
   },
   exam: {
     card:  'bg-[rgba(168,56,54,0.08)] border-danger',
     badge: 'bg-danger/10 text-danger',
-    label: 'Egzamin',
+    label: 'Egz.',
   },
 };
 
@@ -63,11 +66,11 @@ export function ScheduleCard({ event, column, rowStart, rowSpan }: ScheduleCardP
         </span>
       </div>
 
-      {/* Nazwa przedmiotu */}
-      <p className={[
-        'text-badge font-bold leading-tight text-heading',
-        rowSpan >= 3 ? 'line-clamp-2' : 'truncate',
-      ].join(' ')}>
+      {/* Nazwa przedmiotu - wrap do tylu linii ile pozwala wysokosc karty.
+         Bez `line-clamp` / `truncate` -> nigdy nie ma "..." kropkowych.
+         Co nie zmiesci sie pionowo, zostanie po prostu schowane przez
+         `overflow-hidden` rodzica (wizualnie obciete bez "..."). */}
+      <p className="text-badge font-bold leading-tight text-heading break-words">
         {event.title}
       </p>
 

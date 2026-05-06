@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react'
 
 /**
- * Wspolny shell dla strony-stuba: tytul + opis + slot na docelowa zawartosc.
- * Docelowo (G-3 / G-4) kazda strona dostanie wlasna logike, ale "ksztalt" zostaje.
+ * Wspolny shell tresci strony - tytul + opis + slot na zawartosc.
+ *
+ * AppLayout zewnetrzny dostarcza sidebar + topbar + <main>, wiec PageShell
+ * to tylko semantyczna sekcja z naglowkiem (`<section>`) - unikamy
+ * podwojnego `<main>`.
  */
 type Props = {
   title: string
@@ -12,27 +15,18 @@ type Props = {
 
 export function PageShell({ title, subtitle, children }: Props) {
   return (
-    <main style={{ padding: '2rem', maxWidth: 960, margin: '0 auto' }}>
-      <h1 style={{ marginBottom: '0.25rem' }}>{title}</h1>
+    <section className="mx-auto max-w-5xl px-6 py-8">
+      <h1 className="text-display text-heading">{title}</h1>
       {subtitle && (
-        <p style={{ color: '#6B7280', marginTop: 0 }}>{subtitle}</p>
+        <p className="text-ui text-muted mt-1">{subtitle}</p>
       )}
-      <div style={{ marginTop: '1.5rem' }}>
+      <div className="mt-6">
         {children ?? (
-          <div
-            style={{
-              border: '2px dashed #E5E7EB',
-              borderRadius: 8,
-              padding: '2rem',
-              textAlign: 'center',
-              color: '#9CA3AF',
-              fontStyle: 'italic',
-            }}
-          >
+          <div className="border-2 border-dashed border-border-subtle rounded-card p-8 text-center text-muted italic">
             Strona w budowie - placeholder
           </div>
         )}
       </div>
-    </main>
+    </section>
   )
 }

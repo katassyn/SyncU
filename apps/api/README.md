@@ -1,6 +1,6 @@
 # @syncu/api
 
-Backend SyncU — Bun + Elysia, SQLite (dev), deploy na Fly.io.
+Backend SyncU — Bun + Elysia, drizzle-orm, SQLite, deploy na Hetzner VPS.
 
 ## Dev
 

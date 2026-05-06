@@ -5,10 +5,17 @@ interface TopBarProps {
 }
 
 export function TopBar({ onProfileClick }: TopBarProps) {
+  // Trzymamy te sama waga fontu + ten sam offset dolny (transparent border)
+  // dla aktywnego i nieaktywnego stanu - inaczej layout "skacze" bo bold jest
+  // szerszy od regular, a aktywna ramka dodaje 2px + pb-1.5 = ~8px wysokosci.
+  const navLinkBase =
+    'font-semibold text-body tracking-h3 border-b-2 pb-1.5 transition-colors'
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    isActive
-      ? 'font-semibold text-primary-nav border-b-2 border-primary-nav pb-1.5 text-body tracking-h3 transition-colors'
-      : 'font-normal text-nav text-body tracking-h3 hover:text-heading transition-colors';
+    `${navLinkBase} ${
+      isActive
+        ? 'text-primary-nav border-primary-nav'
+        : 'text-nav border-transparent hover:text-heading'
+    }`;
 
   return (
     <header className="fixed top-0 inset-x-0 z-40 backdrop-blur-sm bg-white/80 shadow-card-sm">
