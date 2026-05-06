@@ -1,28 +1,33 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { ClassSession, Course, WeekSchedule } from '@syncu/types'
+import type { ScheduleEntry } from '@syncu/types'
 import { Button, Card } from '@syncu/ui'
-import { fetchWeekSchedule } from '../lib/api'
-import { formatYMD } from '../lib/week'
+import { fetchGroupSchedule, fetchGroups, type GroupSummary } from '../lib/api'
 import { PageShell } from './PageShell'
 
 /**
- * G-3 #1 + "Today fancy":
- *  - Fetch planu biezacego tygodnia z GET /timetable/week
- *  - Filtruje sessions ktore JESZCZE NIE ROZPOCZELY (>= now)
- *  - Pokazuje top 3 najblizsze
- *  - Empty state z CTA na /import gdy plan nie zostal zaimportowany albo
- *    biezacy tydzien jest pusty (zaocznie - typowy przypadek)
+ * G-3 #1 + "Today fancy" (po revertcie do /schedule/*):
  *
- * G-8.5 (kolokwia / countdown) bedzie sekcja PONIZEJ - na razie kosci nie ruszam.
+ * Pokazujemy 3 najblizsze nadchodzace zajecia ze wspolnego planu PK
+ * (z `/schedule/group/:id`), filtrujac wpisy ktorych start >= teraz.
+ *
+ * Zrodlo: identyczne jak w /week (publiczny plan auto-wypelniany przez backend
+ * z PK URL). Wybor grupy synchronizujemy z localStorage `syncu.selectedGroup`,
+ * ktory zapisuje /week.
  */
+
+const LS_GROUP_KEY = 'syncu.selectedGroup'
 
 type State =
   | { kind: 'loading' }
-  | { kind: 'loaded'; sessions: EnrichedSession[] }
+  | { kind: 'noGroup' } // grup nie ma w ogole na backendzie
+  | { kind: 'loaded'; entries: UpcomingEntry[] }
   | { kind: 'error'; message: string }
 
-type EnrichedSession = ClassSession & { course?: Course }
+type UpcomingEntry = ScheduleEntry & {
+  startsAt: Date
+  endsAt: Date
+}
 
 export default function Today() {
   const navigate = useNavigate()
@@ -31,19 +36,42 @@ export default function Today() {
   useEffect(() => {
     let cancelled = false
     const now = new Date()
-    fetchWeekSchedule(formatYMD(now))
-      .then((data) => {
+
+    fetchGroups()
+      .then(async (groupsRes) => {
         if (cancelled) return
-        const upcoming = filterUpcoming(data, now).slice(0, 3)
-        setState({ kind: 'loaded', sessions: upcoming })
+        if (groupsRes.groups.length === 0) {
+          setState({ kind: 'noGroup' })
+          return
+        }
+        const stored = readStoredGroup(groupsRes.groups)
+        // Default = pierwsza podgrupa po sortowaniu (rocznik/grupa/podgrupa)
+        const sortedFirst = [...groupsRes.groups].sort((a, b) => {
+          const ag = Number(a.groupId)
+          const bg = Number(b.groupId)
+          if (ag !== bg) return ag - bg
+          return a.id.localeCompare(b.id)
+        })[0]
+        const selected = stored ?? sortedFirst.id
+        const data = await fetchGroupSchedule(selected)
+        if (cancelled) return
+
+        const upcoming = pickUpcoming(
+          data.sections.flatMap((s) => s.entries),
+          now,
+          3,
+        )
+        setState({ kind: 'loaded', entries: upcoming })
       })
       .catch((err) => {
-        if (cancelled) return
-        setState({
-          kind: 'error',
-          message: err instanceof Error ? err.message : 'Nieznany blad',
-        })
+        if (!cancelled) {
+          setState({
+            kind: 'error',
+            message: err instanceof Error ? err.message : 'Nieznany blad',
+          })
+        }
       })
+
     return () => {
       cancelled = true
     }
@@ -69,12 +97,25 @@ export default function Today() {
         </Card>
       )}
 
-      {state.kind === 'loaded' && state.sessions.length === 0 && (
-        <EmptyState onImport={() => navigate('/import')} />
+      {state.kind === 'noGroup' && (
+        <EmptyState
+          headline="Nie ma planu do wyswietlenia"
+          message="Backend nie zwrocil zadnych grup. Sprobuj zaimportowac wlasny plan."
+          onImport={() => navigate('/import')}
+        />
       )}
 
-      {state.kind === 'loaded' && state.sessions.length > 0 && (
-        <UpcomingSessions sessions={state.sessions} />
+      {state.kind === 'loaded' && state.entries.length === 0 && (
+        <EmptyState
+          headline="Brak zaplanowanych zajec"
+          message="Nie masz juz zajec w biezacym tygodniu. Sprawdz pelny plan w widoku Week."
+          onImport={() => navigate('/week')}
+          ctaLabel="Pelny plan tygodnia"
+        />
+      )}
+
+      {state.kind === 'loaded' && state.entries.length > 0 && (
+        <UpcomingList entries={state.entries} />
       )}
     </PageShell>
   )
@@ -82,14 +123,72 @@ export default function Today() {
 
 /* --- helpers --- */
 
-function filterUpcoming(data: WeekSchedule, now: Date): EnrichedSession[] {
-  const coursesById = new Map<number, Course>(
-    data.courses.map((c) => [c.id, c]),
-  )
-  return data.sessions
-    .filter((s) => new Date(s.startsAt).getTime() >= now.getTime())
-    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
-    .map((s) => ({ ...s, course: coursesById.get(s.courseId) }))
+function readStoredGroup(groups: GroupSummary[]): string | null {
+  try {
+    const v = localStorage.getItem(LS_GROUP_KEY)
+    if (!v) return null
+    return groups.some((g) => g.id === v) ? v : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Bierze entries (PK format: date "DD.MM", time "8.00-10.30"), dopasowuje rok
+ * (zakladajac rok biezacy / nastepny dla daty bliskiej Stycznia), filtruje
+ * `startsAt >= now`, sortuje i zwraca top N.
+ */
+function pickUpcoming(
+  entries: ScheduleEntry[],
+  now: Date,
+  limit: number,
+): UpcomingEntry[] {
+  const upcoming: UpcomingEntry[] = []
+
+  for (const entry of entries) {
+    const startsAt = parseEntryDateTime(entry.date, entry.time, 'start', now)
+    const endsAt = parseEntryDateTime(entry.date, entry.time, 'end', now)
+    if (!startsAt || !endsAt) continue
+    if (startsAt.getTime() < now.getTime()) continue
+    upcoming.push({ ...entry, startsAt, endsAt })
+  }
+
+  upcoming.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+  return upcoming.slice(0, limit)
+}
+
+function parseEntryDateTime(
+  ddmm: string,
+  timeRange: string,
+  which: 'start' | 'end',
+  now: Date,
+): Date | null {
+  // ddmm = "17.03"
+  const dateMatch = ddmm.match(/^(\d{1,2})\.(\d{1,2})$/)
+  if (!dateMatch) return null
+  const day = Number(dateMatch[1])
+  const month = Number(dateMatch[2])
+
+  const parts = timeRange.split('-').map((s) => s.trim())
+  const timePart = which === 'start' ? parts[0] : parts[1]
+  if (!timePart) return null
+  const tMatch = timePart.match(/^(\d{1,2})[.:](\d{1,2})$/)
+  if (!tMatch) return null
+  const hour = Number(tMatch[1])
+  const minute = Number(tMatch[2])
+
+  // Heurystyka roku: zakladamy biezacy rok; jezeli data wypadnie w przeszlosci
+  // wzgledem dzisiaj o wiecej niz 6 miesiecy, prawdopodobnie chodzi o nastepny rok.
+  const year = pickYear(month, day, now)
+  return new Date(year, month - 1, day, hour, minute, 0, 0)
+}
+
+function pickYear(month: number, day: number, now: Date): number {
+  const candidate = new Date(now.getFullYear(), month - 1, day)
+  const diffMonths =
+    (candidate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30)
+  if (diffMonths < -6) return now.getFullYear() + 1
+  return now.getFullYear()
 }
 
 const DAY_NAMES = [
@@ -122,80 +221,49 @@ function formatHM(d: Date): string {
 
 /* --- subkomponenty --- */
 
-function UpcomingSessions({ sessions }: { sessions: EnrichedSession[] }) {
+function UpcomingList({ entries }: { entries: UpcomingEntry[] }) {
   const now = new Date()
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-h3 text-heading font-semibold">
-        Najblizsze zajecia ({sessions.length})
+        Najblizsze zajecia ({entries.length})
       </h2>
-      {sessions.map((s) => (
-        <SessionCard key={s.id} session={s} now={now} />
+      {entries.map((e, i) => (
+        <Card
+          key={`${e.date}-${e.time}-${i}`}
+          variant="white"
+          padding="md"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+            <h3 className="text-h3 text-heading font-semibold">{e.subject}</h3>
+            <span className="text-caption text-muted uppercase tracking-label">
+              {dayLabel(e.startsAt, now)} · {formatHM(e.startsAt)}–{formatHM(e.endsAt)}
+            </span>
+          </div>
+          <p className="text-ui text-muted">{e.date}</p>
+        </Card>
       ))}
     </div>
   )
 }
 
-function SessionCard({
-  session,
-  now,
+function EmptyState({
+  headline,
+  message,
+  onImport,
+  ctaLabel = 'Zaimportuj plan',
 }: {
-  session: EnrichedSession
-  now: Date
+  headline: string
+  message: string
+  onImport: () => void
+  ctaLabel?: string
 }) {
-  const start = new Date(session.startsAt)
-  const end = new Date(session.endsAt)
-  const title = session.title || session.course?.name || 'Zajecia'
-  const room = session.room ?? session.course?.room ?? null
-  const lecturer = session.lecturerName ?? session.course?.lecturerName ?? null
-  const teamsLink = session.course?.meetingLink ?? null
-
-  return (
-    <Card variant="white" padding="md">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
-        <h3 className="text-h3 text-heading font-semibold">{title}</h3>
-        <span className="text-caption text-muted uppercase tracking-label">
-          {dayLabel(start, now)} · {formatHM(start)}–{formatHM(end)}
-        </span>
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-ui text-muted">
-        {room && (
-          <span>
-            <strong className="text-body">Sala:</strong> {room}
-          </span>
-        )}
-        {lecturer && (
-          <span>
-            <strong className="text-body">Prowadzacy:</strong> {lecturer}
-          </span>
-        )}
-        {teamsLink && (
-          <a
-            href={teamsLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary underline hover:text-primary-dark"
-          >
-            Teams
-          </a>
-        )}
-      </div>
-    </Card>
-  )
-}
-
-function EmptyState({ onImport }: { onImport: () => void }) {
   return (
     <Card variant="surface" padding="lg" className="text-center">
-      <h2 className="text-h2 text-heading font-semibold mb-2">
-        Brak zaplanowanych zajec
-      </h2>
-      <p className="text-muted mb-6 max-w-md mx-auto">
-        W biezacym tygodniu nie ma juz zajec, albo plan nie zostal jeszcze
-        zaimportowany.
-      </p>
+      <h2 className="text-h2 text-heading font-semibold mb-2">{headline}</h2>
+      <p className="text-muted mb-6 max-w-md mx-auto">{message}</p>
       <Button variant="primary" size="md" onClick={onImport}>
-        Zaimportuj plan
+        {ctaLabel}
       </Button>
     </Card>
   )
