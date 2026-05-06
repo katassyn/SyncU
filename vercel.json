@@ -1,8 +1,7 @@
 {
+  "framework": null,
+  "installCommand": "bun install",
   "buildCommand": "bun run --filter=@syncu/web build",
   "outputDirectory": "apps/web/dist",
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
-  ]
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
