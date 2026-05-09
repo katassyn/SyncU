@@ -75,3 +75,16 @@ Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 
 ### Weekly timetable
 GET {{baseUrl}}/timetable/week?date=2026-05-06
+
+### Register user
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "register@example.com",
+  "password": "VeryStrong123",
+  "displayName": "Kamil Gebala",
+  "university": "Politechnika Krakowska",
+  "fieldOfStudy": "Informatyka",
+  "yearOfStudy": 2
+}
