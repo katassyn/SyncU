@@ -97,3 +97,7 @@ Content-Type: application/json
   "email": "register@example.com",
   "password": "VeryStrong123"
 }
+
+### Current user
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{authToken}}
