@@ -17,6 +17,25 @@ export const users = sqliteTable(
 	}),
 );
 
+export const authCredentials = sqliteTable(
+	"auth_credentials",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		userId: integer("user_id")
+			.notNull()
+			.references(() => users.id),
+		email: text("email").notNull(),
+		passwordHash: text("password_hash").notNull(),
+		salt: text("salt").notNull(),
+		createdAt: text("created_at").notNull(),
+		updatedAt: text("updated_at").notNull(),
+	},
+	(table) => ({
+		userIdUniqueIdx: uniqueIndex("auth_credentials_user_id_unique").on(table.userId),
+		emailUniqueIdx: uniqueIndex("auth_credentials_email_unique").on(table.email),
+	}),
+);
+
 export const semesters = sqliteTable(
 	"semesters",
 	{
