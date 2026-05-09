@@ -88,3 +88,12 @@ Content-Type: application/json
   "fieldOfStudy": "Informatyka",
   "yearOfStudy": 2
 }
+
+### Login user
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "register@example.com",
+  "password": "VeryStrong123"
+}
