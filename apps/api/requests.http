@@ -101,3 +101,10 @@ Content-Type: application/json
 ### Current user
 GET {{baseUrl}}/auth/me
 Authorization: Bearer {{authToken}}
+
+### Logout user
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{}

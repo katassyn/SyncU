@@ -345,4 +345,28 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
 		return {
 			user: toAuthUser(user),
 		};
+	})
+	.post("/logout", async ({ headers, set }) => {
+		const authorization = headers.authorization;
+
+		if (!authorization?.startsWith("Bearer ")) {
+			set.status = 401;
+			return {
+				message: "Unauthorized.",
+			};
+		}
+
+		const token = authorization.slice("Bearer ".length).trim();
+		const payload = await verifyJwt(token);
+
+		if (!payload) {
+			set.status = 401;
+			return {
+				message: "Unauthorized.",
+			};
+		}
+
+		return {
+			message: "Logged out successfully.",
+		};
 	});
