@@ -1,0 +1,157 @@
+/* ──────────────────────────────────────────────────────────────
+   SyncU Design Tokens — source of truth
+   Extracted from Figma (file: 5bPlLv3rSwSpzOdM80uRla)
+
+   Usage:
+     In apps/web/src/index.css:
+       @import "tailwindcss";
+       @import "@syncu/ui/tokens.css";
+
+   This file defines two layers:
+   1. :root  — raw CSS custom properties (--syncu-*)
+   2. @theme — Tailwind v4 semantic mappings that generate utilities
+               e.g. bg-primary, text-heading, rounded-card, shadow-card
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Raw token values ────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --syncu-bg-base:      #f6fafb;
+  --syncu-bg-surface-1: #eef5f6;
+  --syncu-bg-surface-2: #e7eff0;
+  --syncu-bg-surface-3: #e1eaeb;
+
+  /* Brand – Teal scale */
+  --syncu-teal-50:  #eafcff;
+  --syncu-teal-100: #a9eef8;
+  --syncu-teal-200: #cde7eb;
+  --syncu-teal-500: #1b6871;
+  --syncu-teal-600: #115e59;
+  --syncu-teal-700: #035c65;
+  --syncu-teal-800: #005b63;
+
+  /* Navy/Blue – secondary accent (study sessions, personal events) */
+  --syncu-navy-400: #416280;
+  --syncu-navy-500: #2e506d;
+
+  /* Text */
+  --syncu-text-heading: #2a3436;
+  --syncu-text-body:    #576162;
+  --syncu-text-muted:   rgb(87 97 98 / 0.6);
+  --syncu-text-nav:     #64748b;
+
+  /* Status */
+  --syncu-danger:  #a83836;
+  --syncu-success: #10b981;
+  --syncu-neutral: #a9b4b5;
+
+  /* Borders */
+  --syncu-border-subtle: rgb(169 180 181 / 0.1);
+  --syncu-border:        rgb(169 180 181 / 0.2);
+  --syncu-border-medium: rgb(169 180 181 / 0.3);
+}
+
+/* ── Tailwind v4 @theme mapping ──────────────────────────────── */
+@theme {
+  /* ── Colors ── */
+
+  /* Page / card backgrounds */
+  --color-bg-base:   var(--syncu-bg-base);
+  --color-surface-1: var(--syncu-bg-surface-1);
+  --color-surface-2: var(--syncu-bg-surface-2);
+  --color-surface-3: var(--syncu-bg-surface-3);
+
+  /* Primary teal */
+  --color-primary:        var(--syncu-teal-500);
+  --color-primary-dark:   var(--syncu-teal-700);
+  --color-primary-nav:    var(--syncu-teal-600);
+  --color-primary-deep:   var(--syncu-teal-800);
+  --color-primary-light:  var(--syncu-teal-100);
+  --color-primary-subtle: var(--syncu-teal-200);
+  --color-on-primary:     var(--syncu-teal-50);
+
+  /* Secondary navy */
+  --color-navy:      var(--syncu-navy-400);
+  --color-navy-dark: var(--syncu-navy-500);
+
+  /* Text */
+  --color-heading: var(--syncu-text-heading);
+  --color-body:    var(--syncu-text-body);
+  --color-muted:   var(--syncu-text-muted);
+  --color-nav:     var(--syncu-text-nav);
+
+  /* Status */
+  --color-danger:  var(--syncu-danger);
+  --color-success: var(--syncu-success);
+  --color-neutral: var(--syncu-neutral);
+
+  /* Borders */
+  --color-border:        var(--syncu-border);
+  --color-border-subtle: var(--syncu-border-subtle);
+  --color-border-medium: var(--syncu-border-medium);
+
+  /* ── Border radii ── */
+  /* Use rounded-card-sm, rounded-card, rounded-card-lg, rounded-pill */
+  --radius-card-sm: 16px;
+  --radius-card:    20px;
+  --radius-card-lg: 24px;
+  --radius-pill:    9999px;
+
+  /* ── Shadows ── */
+  --shadow-card:    0px 24px 48px -12px rgb(42 52 54 / 0.04);
+  --shadow-card-sm: 0px 1px 1px rgb(0 0 0 / 0.05);
+  --shadow-fab:     0px 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-primary: 0px 20px 25px -5px rgb(27 104 113 / 0.2),
+                    0px 8px 10px -6px rgb(27 104 113 / 0.2);
+
+  /* ── Typography ── */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  /* ── Font sizes with paired line-heights (from Figma) ──
+     Generates: text-display, text-h2, text-h3, text-body,
+                text-ui, text-caption, text-label, text-badge
+     Usage: className="text-h2 font-bold"
+  ── */
+
+  /* Hero / display headings */
+  --text-display: 2.75rem;              /* 44px */
+  --text-display--line-height: 1.25;
+  --text-display--letter-spacing: -0.05em;
+
+  --text-display-lg: 3rem;              /* 48px — calendar month heading */
+  --text-display-lg--line-height: 1;
+  --text-display-lg--letter-spacing: -0.025em;
+
+  /* Section headings */
+  --text-h2: 1.25rem;                   /* 20px */
+  --text-h2--line-height: 1.4;
+  --text-h2--letter-spacing: -0.025em;
+
+  --text-h3: 1.125rem;                  /* 18px */
+  --text-h3--line-height: 1.555;
+
+  /* Body / content */
+  --text-body: 1rem;                    /* 16px */
+  --text-body--line-height: 1.5;
+
+  --text-ui: 0.875rem;                  /* 14px — subtitles, metadata */
+  --text-ui--line-height: 1.43;
+
+  /* Small / utility text */
+  --text-caption: 0.75rem;             /* 12px */
+  --text-caption--line-height: 1.333;
+
+  --text-label: 0.6875rem;             /* 11px — uppercase labels */
+  --text-label--line-height: 1.5;
+  --text-label--letter-spacing: 0.05em;
+
+  --text-badge: 0.625rem;              /* 10px — chips, event tags */
+  --text-badge--line-height: 1.5;
+  --text-badge--letter-spacing: 0.1em;
+
+  /* ── Spacing ──
+     Tailwind's default 4px scale covers all values from the design
+     (4, 8, 12, 16, 20, 24, 32, 48 px). No custom tokens needed.
+     Note: 44px padding (p-11) = 11 × 4px — matches Tailwind default.
+  ── */
+}
