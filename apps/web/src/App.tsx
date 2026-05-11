@@ -7,6 +7,9 @@ import Subject from './pages/Subject'
 import Focus from './pages/Focus'
 import Library from './pages/Library'
 import Import from './pages/Import'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import Onboarding from './pages/Onboarding'
 import NotFound from './pages/NotFound'
 
 function App() {
@@ -21,6 +24,11 @@ function App() {
         <Route path="/focus" element={<Focus />} />
         <Route path="/library" element={<Library />} />
         <Route path="/import" element={<Import />} />
+
+        {/* Auth + onboarding (G-6.9, G-6.10, G-7.4) */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/onboarding" element={<Onboarding />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
