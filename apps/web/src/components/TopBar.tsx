@@ -5,24 +5,21 @@ interface TopBarProps {
 }
 
 export function TopBar({ onProfileClick }: TopBarProps) {
-  // Trzymamy te sama waga fontu + ten sam offset dolny (transparent border)
-  // dla aktywnego i nieaktywnego stanu - inaczej layout "skacze" bo bold jest
-  // szerszy od regular, a aktywna ramka dodaje 2px + pb-1.5 = ~8px wysokosci.
   const navLinkBase =
-    'font-semibold text-body tracking-h3 border-b-2 pb-1.5 transition-colors'
+    'font-semibold text-ui sm:text-body border-b-2 pb-1.5 transition-colors whitespace-nowrap'
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `${navLinkBase} ${
       isActive
         ? 'text-primary-nav border-primary-nav'
-        : 'text-nav border-transparent hover:text-heading'
+        : 'text-nav border-transparent hover:text-primary-nav hover:border-primary-nav/40'
     }`;
 
   return (
     <header className="fixed top-0 inset-x-0 z-40 backdrop-blur-sm bg-white/80 shadow-card-sm">
-      <div className="flex items-center justify-between px-11 py-4">
+      <div className="flex items-center justify-between gap-4 px-4 sm:px-6 lg:px-11 py-3 sm:py-4">
 
-        {/* Left — search */}
-        <div className="flex-1 max-w-[448px] relative">
+        {/* Left — search (ukryte na mobile) */}
+        <div className="hidden md:flex flex-1 max-w-sm lg:max-w-[448px] relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">
             <SearchIcon />
           </span>
@@ -34,15 +31,15 @@ export function TopBar({ onProfileClick }: TopBarProps) {
         </div>
 
         {/* Center — navigation */}
-        <nav className="flex items-center gap-8">
-          <NavLink to="/today" className={navLinkClass}>Dashboard</NavLink>
-          <NavLink to="/week"  className={navLinkClass}>Kalendarz</NavLink>
+        <nav className="flex items-center gap-4 sm:gap-6 lg:gap-8 mx-auto md:mx-0">
+          <NavLink to="/today"   className={navLinkClass}>Dashboard</NavLink>
+          <NavLink to="/week"    className={navLinkClass}>Kalendarz</NavLink>
           <NavLink to="/library" className={navLinkClass}>Grupy</NavLink>
         </nav>
 
         {/* Right — actions + avatar + brand */}
-        <div className="flex-1 flex items-center justify-end gap-6">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-6">
+          <div className="hidden sm:flex items-center gap-2 sm:gap-3">
             <button aria-label="Powiadomienia" className="p-2 rounded-card-sm text-muted hover:text-heading hover:bg-surface-1 transition-colors cursor-pointer">
               <BellIcon />
             </button>
@@ -51,15 +48,15 @@ export function TopBar({ onProfileClick }: TopBarProps) {
             </button>
           </div>
 
-          <div className="flex items-center gap-3 pl-6 border-l border-border-subtle">
+          <div className="flex items-center gap-2 sm:gap-3 sm:pl-4 lg:pl-6 sm:border-l sm:border-border-subtle">
             <button
               onClick={onProfileClick}
               aria-label="Otwórz profil"
-              className="size-9 rounded-pill border-2 border-primary/10 bg-primary-light text-primary-nav font-bold text-caption flex items-center justify-center hover:border-primary/30 transition-colors cursor-pointer"
+              className="size-8 sm:size-9 rounded-pill border-2 border-primary/10 bg-primary-light text-primary-nav font-bold text-caption flex items-center justify-center hover:border-primary/30 transition-colors cursor-pointer"
             >
               A
             </button>
-            <span className="text-h3 font-bold text-primary-nav tracking-tight">
+            <span className="hidden sm:block text-h3 font-bold text-primary-nav tracking-tight">
               SyncU
             </span>
           </div>

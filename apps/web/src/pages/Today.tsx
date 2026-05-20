@@ -205,7 +205,6 @@ function UpcomingList({ state, entries }: { state: ScheduleState; entries: Sched
 // --------------- main ---------------
 
 export default function Today() {
-  // Inicjalizacja od razu jako 'loading' jeśli jest zapisana grupa — bez synchronicznego setState w efekcie
   const [scheduleState, setScheduleState] = useState<ScheduleState>(() =>
     localStorage.getItem('syncu.selectedGroup') ? { kind: 'loading' } : { kind: 'idle' }
   );
@@ -292,8 +291,8 @@ export default function Today() {
                     <div className="w-px bg-border-subtle mt-1" style={{ height: '2.5rem' }} />
                   )}
                 </div>
-                <div className="flex-1 min-w-0 pb-4 last:pb-0">
-                  <p className="text-body font-semibold text-heading m-0 leading-tight truncate">{d.title}</p>
+                <div className="flex-1 min-w-0 pb-4 last:pb-0 cursor-pointer group">
+                  <p className="text-body font-semibold text-heading m-0 leading-tight truncate group-hover:text-primary-nav transition-colors duration-150">{d.title}</p>
                   <span className={['text-badge font-bold mt-0.5 inline-block', d.urgent ? 'text-danger' : 'text-muted'].join(' ')}>
                     {d.when}
                   </span>

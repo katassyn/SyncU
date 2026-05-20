@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import type { ClassSessionType, ScheduleData, WeekEvent } from '@syncu/types'
+import { NavLink, useNavigate } from 'react-router-dom'
+import type { ClassSessionType, ScheduleData, ScheduleEntry, WeekEvent } from '@syncu/types'
 import { normalize } from '@syncu/core'
 import { Button, Card } from '@syncu/ui'
 import { fetchGroupSchedule, fetchGroups, type GroupSummary } from '../lib/api'
@@ -9,21 +9,9 @@ import { WeekDatePicker } from '../components/WeekDatePicker'
 import { WeekGrid } from '../components/WeekGrid'
 import { PageShell } from './PageShell'
 
-/**
- * G-4 + G-5.5 (po reverse): /week jako publiczny widok planu PK.
- *
- * Zrodlo danych:
- *  - GET /schedule/groups          - lista grup (cron na backendzie scrapuje
- *                                    PK i wypelnia DB)
- *  - GET /schedule/group/:groupId  - pelny plan grupy (sections + entries)
- *
- * /timetable/week (per-user import) NIE jest tu uzywany - to oddzielny feature
- * pod logowanie + import z xlsx, na pozniejsze tygodnie (G-5.6 + G-6).
- *
- * Wybor grupy zapamietujemy w localStorage zeby nie pytac za kazdym razem.
- */
-
 const LS_GROUP_KEY = 'syncu.selectedGroup'
+
+type View = 'day' | 'week'
 
 type State =
   | { kind: 'loadingGroups' }
@@ -41,12 +29,17 @@ type State =
       selected?: string
     }
 
+function dayStart(d: Date = new Date()): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+}
+
 export default function Week() {
+  const [view, setView] = useState<View>('week')
   const [state, setState] = useState<State>({ kind: 'loadingGroups' })
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
+  const [selectedDate, setSelectedDate] = useState<Date>(() => dayStart())
   const navigate = useNavigate()
 
-  // 1) Najpierw pobieramy liste grup
   useEffect(() => {
     let cancelled = false
     fetchGroups()
@@ -60,7 +53,6 @@ export default function Week() {
           return
         }
         const stored = readStoredGroup(res.groups)
-        // Default = pierwsza podgrupa (sortowana - najnizsza w hierarchii)
         const sortedFirst = [...res.groups].sort((a, b) => {
           const ag = Number(a.groupId)
           const bg = Number(b.groupId)
@@ -83,12 +75,12 @@ export default function Week() {
     }
   }, [])
 
+  // --- week view ---
   const weekDates = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
     [weekStart],
   )
 
-  // Spluszczamy entries ze wszystkich subgrup wybranej grupy
   const events = useMemo((): WeekEvent[] => {
     if (state.kind !== 'loaded') return []
     const entries = state.data.sections.flatMap((s) => s.entries)
@@ -109,59 +101,141 @@ export default function Week() {
 
   const isEmpty = state.kind === 'loaded' && events.length === 0
 
-  return (
-    <PageShell title="Week" subtitle="Plan zajec na tydzien">
-      {state.kind === 'loadingGroups' && (
-        <p className="text-muted">Ladowanie listy grup...</p>
-      )}
+  // --- day view ---
+  const today = useMemo(() => dayStart(), [])
+  const isToday = selectedDate.getTime() === today.getTime()
 
+  const dayEntries = useMemo((): ScheduleEntry[] => {
+    if (state.kind !== 'loaded') return []
+    const ddmm = formatDDMM(selectedDate)
+    return state.data.sections
+      .flatMap((s) => s.entries)
+      .filter((e) => e.date === ddmm)
+      .sort((a, b) => a.time.localeCompare(b.time))
+  }, [state, selectedDate])
+
+  const hasData =
+    state.kind === 'loadingSchedule' ||
+    state.kind === 'loaded' ||
+    (state.kind === 'error' && state.groups)
+
+  return (
+    <PageShell title="Plan zajęć" subtitle={view === 'day' ? 'Widok dzienny' : 'Widok tygodniowy'}>
+
+      {/* Toggle Dziś / Tydzień */}
+      <div className="flex gap-1 mb-6">
+        {(['day', 'week'] as View[]).map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setView(v)}
+            className={[
+              'px-4 py-2 rounded-pill text-ui font-medium transition-colors cursor-pointer',
+              view === v
+                ? 'bg-primary text-on-primary'
+                : 'bg-surface-1 text-heading hover:bg-surface-2',
+            ].join(' ')}
+          >
+            {v === 'day' ? 'Dziś' : 'Tydzień'}
+          </button>
+        ))}
+      </div>
+
+      {/* Error (no groups) */}
       {state.kind === 'error' && !state.groups && (
-        <Card
-          variant="surface"
-          padding="md"
-          className="border border-danger/40 bg-danger/5 mb-4"
-        >
+        <Card variant="surface" padding="md" className="border border-danger/40 bg-danger/5 mb-4">
           <p className="text-danger font-semibold mb-1">Blad</p>
           <p className="text-muted text-ui">{state.message}</p>
         </Card>
       )}
 
-      {(state.kind === 'loadingSchedule' ||
-        state.kind === 'loaded' ||
-        (state.kind === 'error' && state.groups)) && (
-        <>
-          <GroupSelector
-            groups={state.groups!}
-            selected={state.selected!}
-            onChange={(g) => {
-              writeStoredGroup(g)
-              loadSchedule(g, state.groups!, setState)
-            }}
-          />
-          <WeekDatePicker weekStart={weekStart} onChange={setWeekStart} />
+      {/* Group selector */}
+      {hasData && (
+        <GroupSelector
+          groups={state.groups!}
+          selected={state.selected!}
+          onChange={(g) => {
+            writeStoredGroup(g)
+            loadSchedule(g, state.groups!, setState)
+          }}
+        />
+      )}
 
-          {state.kind === 'loadingSchedule' && (
-            <p className="text-muted">Ladowanie planu grupy...</p>
+      {/* ── Day view ── */}
+      {view === 'day' && (
+        <>
+          <DayNav
+            date={selectedDate}
+            isToday={isToday}
+            onPrev={() => setSelectedDate((d) => addDays(d, -1))}
+            onNext={() => setSelectedDate((d) => addDays(d, 1))}
+            onToday={() => setSelectedDate(dayStart())}
+          />
+
+          {(state.kind === 'loadingGroups' || state.kind === 'loadingSchedule') && (
+            <div className="flex flex-col gap-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-16 rounded-card-sm bg-surface-1 animate-pulse" />
+              ))}
+            </div>
           )}
 
-          {state.kind === 'error' && (
-            <Card
-              variant="surface"
-              padding="md"
-              className="border border-danger/40 bg-danger/5 mb-4"
-            >
+          {state.kind === 'loaded' && dayEntries.length > 0 && (
+            <div className="flex flex-col gap-3">
+              {dayEntries.map((e, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 px-4 py-3 rounded-card-sm bg-white shadow-card-sm border-l-[3px] border-primary"
+                >
+                  <div className="flex-1 min-w-0">
+                    <span className="text-badge text-muted block mb-1">{e.time}</span>
+                    <p className="text-body font-semibold text-heading m-0 truncate">{e.subject}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {state.kind === 'loaded' && dayEntries.length === 0 && (
+            <Card variant="surface" padding="lg" className="text-center">
+              <p className="text-heading font-semibold mb-2">Brak zajęć</p>
+              <p className="text-muted text-ui">
+                W tym dniu nie ma zajęć.{' '}
+                <NavLink to="/import" className="text-primary-nav font-semibold hover:underline">
+                  Zaimportuj plan
+                </NavLink>
+                .
+              </p>
+            </Card>
+          )}
+        </>
+      )}
+
+      {/* ── Week view ── */}
+      {view === 'week' && (
+        <>
+          {state.kind === 'loadingGroups' && (
+            <p className="text-muted">Ladowanie listy grup...</p>
+          )}
+
+          {state.kind === 'error' && state.groups && (
+            <Card variant="surface" padding="md" className="border border-danger/40 bg-danger/5 mb-4">
               <p className="text-danger font-semibold mb-1">Blad</p>
               <p className="text-muted text-ui mb-3">{state.message}</p>
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() =>
-                  loadSchedule(state.selected!, state.groups!, setState)
-                }
+                onClick={() => loadSchedule(state.selected!, state.groups!, setState)}
               >
                 Sprobuj ponownie
               </Button>
             </Card>
+          )}
+
+          <WeekDatePicker weekStart={weekStart} onChange={setWeekStart} />
+
+          {state.kind === 'loadingSchedule' && (
+            <p className="text-muted">Ladowanie planu grupy...</p>
           )}
 
           {isEmpty && (
@@ -177,33 +251,20 @@ export default function Week() {
           )}
         </>
       )}
+
     </PageShell>
   )
 }
 
 /* --- helpers --- */
 
-/**
- * Zgaduje typ zajec z tekstu pola "subject" w xls'u PK.
- * Format od PK to plain string typu:
- *   "WdPAI lab. AWid s. 114 GIL"
- *   "Programowanie interfejsow graficznych wyklad dr hab. inz. ..."
- *   "Projekt zespolowy P TG s. 131"
- *   "Inzynieria oprogramowania cw. ..."
- * Bez tego mapowania wszystko renderuje sie jako "lecture" - dlatego badge
- * w ScheduleCard pokazywal "WYKLAD" dla labow.
- */
 function inferSessionType(subject: string): ClassSessionType {
-  // normalize z @syncu/core: lowercase + strip polskich znakow + collapse whitespace.
-  // "Programowanie wykład dr hab. ..." -> "programowanie wyklad dr hab. ..."
   const s = normalize(subject)
-  // kolejnosc ma znaczenie: "egzamin" wpierw, potem "lab", "projekt", itd.
   if (/\begzamin\b/.test(s)) return 'exam'
   if (/\blab\b|\blab\.|laboratorium/.test(s)) return 'lab'
   if (/\bprojekt\b/.test(s)) return 'project'
   if (/\bcw\b|\bcw\.|cwiczenia|seminarium|seminar/.test(s)) return 'seminar'
   if (/\bwyklad\b|\bwyk\b|\bwyk\./.test(s)) return 'lecture'
-  // Default: jezeli plan PK nie podaje typu, jest to typowo wyklad.
   return 'lecture'
 }
 
@@ -224,28 +285,22 @@ function loadSchedule(
 ): void {
   setState({ kind: 'loadingSchedule', groups, selected: groupId })
   fetchGroupSchedule(groupId)
-    .then((data) => {
-      setState({ kind: 'loaded', groups, selected: groupId, data })
-    })
-    .catch((err) => {
+    .then((data) => setState({ kind: 'loaded', groups, selected: groupId, data }))
+    .catch((err) =>
       setState({
         kind: 'error',
         groups,
         selected: groupId,
         message: err instanceof Error ? err.message : 'Nieznany blad',
-      })
-    })
+      }),
+    )
 }
 
 function readStoredGroup(groups: GroupSummary[]): string | null {
   try {
     const v = localStorage.getItem(LS_GROUP_KEY)
     if (!v) return null
-    // Storage trzyma teraz pelne id podgrupy (np. "31_1"). Backward compat:
-    // jezeli ktos ma stare "31", traktujemy jako brak (uzytkownik dostanie
-    // pierwsza podgrupe i moze sobie wybrac wlasciwa).
-    const exists = groups.some((g) => g.id === v)
-    return exists ? v : null
+    return groups.some((g) => g.id === v) ? v : null
   } catch {
     return null
   }
@@ -270,11 +325,6 @@ function GroupSelector({
   selected: string
   onChange: (g: string) => void
 }) {
-  // Pokazujemy KAZDA podgrupe osobno (np. 31_1 i 31_2 jako oddzielne opcje),
-  // bo backend matchuje po prefiksie - jak wyslemy "31" to dostaniemy MIX
-  // wszystkich podgrup, czyli zajecia obu labow.
-  // Sortujemy: po groupId numerycznie (11/12 -> rok 1, 21/22 -> rok 2, ...),
-  // potem leksykalnie po pelnym id (31_1 przed 31_2).
   const sortedGroups = useMemo(() => {
     return [...groups].sort((a, b) => {
       const ag = Number(a.groupId)
@@ -304,12 +354,41 @@ function GroupSelector({
   )
 }
 
-/**
- * Empty state - "W tym tygodniu nie ma zajec".
- * Plan zaoczny obejmuje tylko wybrane weekendy, wiec pusty tydzien to
- * normalna sytuacja - primary action = nawigacja, import jako sekundarna
- * podpowiedz dla osob ktore chca uzyc swojego pliku xlsx.
- */
+function DayNav({
+  date,
+  isToday,
+  onPrev,
+  onNext,
+  onToday,
+}: {
+  date: Date
+  isToday: boolean
+  onPrev: () => void
+  onNext: () => void
+  onToday: () => void
+}) {
+  const label = date.toLocaleDateString('pl-PL', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
+
+  return (
+    <div className="flex items-center gap-2 mb-4 flex-wrap">
+      <Button type="button" variant="secondary" size="sm" onClick={onPrev} aria-label="Poprzedni dzień">
+        ←
+      </Button>
+      <Button type="button" variant="secondary" size="sm" onClick={onToday} disabled={isToday}>
+        Dziś
+      </Button>
+      <Button type="button" variant="secondary" size="sm" onClick={onNext} aria-label="Następny dzień">
+        →
+      </Button>
+      <span className="ml-3 text-ui font-semibold text-heading capitalize">{label}</span>
+    </div>
+  )
+}
+
 function EmptyWeekState({
   onPrev,
   onNext,
@@ -328,7 +407,6 @@ function EmptyWeekState({
         Plan studiow zaocznych nie obejmuje kazdego weekendu. Sprawdz sasiednie
         tygodnie - tam pewnie cos jest.
       </p>
-
       <div className="flex gap-2 justify-center mb-8 flex-wrap">
         <Button variant="secondary" size="md" onClick={onPrev}>
           ← Poprzedni tydzien
@@ -337,7 +415,6 @@ function EmptyWeekState({
           Nastepny tydzien →
         </Button>
       </div>
-
       <button
         type="button"
         onClick={onImport}

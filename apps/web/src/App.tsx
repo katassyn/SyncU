@@ -16,7 +16,7 @@ function App() {
   return (
     <AppLayout>
       <Routes>
-        <Route path="/" element={<Navigate to="/today" replace />} />
+        <Route path="/" element={<Navigate to="/week" replace />} />
 
         <Route path="/today" element={<Today />} />
         <Route path="/week" element={<Week />} />
