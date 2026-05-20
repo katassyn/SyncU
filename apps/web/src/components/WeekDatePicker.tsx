@@ -1,3 +1,4 @@
+import { Button } from '@syncu/ui'
 import { addDays, formatWeekLabel, startOfWeek } from '../lib/week'
 
 type Props = {
@@ -5,52 +6,23 @@ type Props = {
   onChange: (newStart: Date) => void
 }
 
-const btn: React.CSSProperties = {
-  padding: '0.4rem 0.8rem',
-  background: 'white',
-  color: '#374151',
-  border: '1px solid #D1D5DB',
-  borderRadius: 6,
-  fontWeight: 500,
-  cursor: 'pointer',
-}
-
-/**
- * G-4: Date picker tygodnia (prev / Dzis / next).
- */
 export function WeekDatePicker({ weekStart, onChange }: Props) {
   const prev = () => onChange(addDays(weekStart, -7))
   const next = () => onChange(addDays(weekStart, 7))
   const today = () => onChange(startOfWeek(new Date()))
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        gap: '0.5rem',
-        alignItems: 'center',
-        marginBottom: '1rem',
-        flexWrap: 'wrap',
-      }}
-    >
-      <button type="button" onClick={prev} style={btn} aria-label="Poprzedni tydzien">
+    <div className="flex items-center gap-2 mb-4 flex-wrap">
+      <Button type="button" variant="secondary" size="sm" onClick={prev} aria-label="Poprzedni tydzień">
         ←
-      </button>
-      <button type="button" onClick={today} style={btn}>
-        Dzis
-      </button>
-      <button type="button" onClick={next} style={btn} aria-label="Nastepny tydzien">
+      </Button>
+      <Button type="button" variant="secondary" size="sm" onClick={today}>
+        Dziś
+      </Button>
+      <Button type="button" variant="secondary" size="sm" onClick={next} aria-label="Następny tydzień">
         →
-      </button>
-      <span
-        style={{
-          marginLeft: '0.75rem',
-          fontWeight: 600,
-          color: '#111827',
-        }}
-      >
-        {formatWeekLabel(weekStart)}
-      </span>
+      </Button>
+      <span className="ml-3 text-ui font-semibold text-heading">{formatWeekLabel(weekStart)}</span>
     </div>
   )
 }

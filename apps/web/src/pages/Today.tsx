@@ -205,7 +205,6 @@ function UpcomingList({ state, entries }: { state: ScheduleState; entries: Sched
 // --------------- main ---------------
 
 export default function Today() {
-  // Inicjalizacja od razu jako 'loading' jeśli jest zapisana grupa — bez synchronicznego setState w efekcie
   const [scheduleState, setScheduleState] = useState<ScheduleState>(() =>
     localStorage.getItem('syncu.selectedGroup') ? { kind: 'loading' } : { kind: 'idle' }
   );

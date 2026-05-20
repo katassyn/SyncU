@@ -1,8 +1,7 @@
 import { NavLink } from 'react-router-dom';
 
 const navItems = [
-  { label: 'Dziś',        href: '/today',    icon: <TodayIcon /> },
-  { label: 'Ten tydzień', href: '/week',     icon: <WeekIcon /> },
+  { label: 'Kalendarz',   href: '/week',     icon: <WeekIcon /> },
   { label: 'Przedmioty',  href: '/subjects', icon: <SubjectsIcon /> },
   { label: 'Focus Mode',  href: '/focus',    icon: <FocusIcon /> },
   { label: 'Biblioteka',  href: '/library',  icon: <LibraryIcon /> },
@@ -55,15 +54,6 @@ export function Sidebar() {
   );
 }
 
-function TodayIcon() {
-  return (
-    <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="size-full">
-      <rect x="2" y="3" width="14" height="13" rx="2" />
-      <path d="M2 7h14M6 2v2M12 2v2" />
-      <circle cx="9" cy="11" r="1" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
 
 function WeekIcon() {
   return (
