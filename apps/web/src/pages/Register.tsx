@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Button, Card, Input } from '@syncu/ui'
+import { Button, Card, Input, Form, FormField } from '@syncu/ui'
 import { registerUser } from '../lib/auth'
 
 /**
@@ -54,47 +54,55 @@ export default function Register() {
           Zacznij od wyboru swojej grupy - reszta to plan, kolokwia i nauka.
         </p>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input
-            label="Email"
-            type="email"
-            placeholder="ty@pk.edu.pl"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
-          <Input
-            label="Imie wyswietlane"
-            type="text"
-            placeholder="Maks S."
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            required
-            minLength={2}
-            maxLength={100}
-            autoComplete="name"
-          />
-          <Input
-            label="Haslo"
-            type="password"
-            placeholder="min. 8 znakow"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="new-password"
-            minLength={8}
-          />
-          <Input
-            label="Powtorz haslo"
-            type="password"
-            placeholder="potwierdzenie"
-            value={passwordConfirm}
-            onChange={(e) => setPasswordConfirm(e.target.value)}
-            required
-            autoComplete="new-password"
-            minLength={8}
-          />
+        <Form onSubmit={handleSubmit}>
+          <FormField label="Email" htmlFor="email">
+            <Input
+              id="email"
+              type="email"
+              placeholder="ty@pk.edu.pl"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+          </FormField>
+          <FormField label="Imie wyswietlane" htmlFor="displayName">
+            <Input
+              id="displayName"
+              type="text"
+              placeholder="Maks S."
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              required
+              minLength={2}
+              maxLength={100}
+              autoComplete="name"
+            />
+          </FormField>
+          <FormField label="Haslo" htmlFor="password">
+            <Input
+              id="password"
+              type="password"
+              placeholder="min. 8 znakow"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="new-password"
+              minLength={8}
+            />
+          </FormField>
+          <FormField label="Powtorz haslo" htmlFor="passwordConfirm">
+            <Input
+              id="passwordConfirm"
+              type="password"
+              placeholder="potwierdzenie"
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              required
+              autoComplete="new-password"
+              minLength={8}
+            />
+          </FormField>
 
           {error && (
             <p className="text-ui text-danger -mt-1">{error}</p>
@@ -109,7 +117,7 @@ export default function Register() {
           >
             {loading ? 'Tworzenie konta...' : 'Stworz konto'}
           </Button>
-        </form>
+        </Form>
 
         <p className="text-ui text-muted text-center mt-6">
           Masz juz konto?{' '}

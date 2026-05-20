@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Button, Card, Input } from '@syncu/ui'
+import { Button, Card, Input, Form, FormField } from '@syncu/ui'
 import { loginUser } from '../lib/auth'
 
 /**
@@ -39,26 +39,30 @@ export default function Login() {
           Dostep do planu zajec, kolokwiow i statystyk nauki.
         </p>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input
-            label="Email"
-            type="email"
-            placeholder="ty@pk.edu.pl"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
-          <Input
-            label="Haslo"
-            type="password"
-            placeholder="min. 8 znakow"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-            minLength={8}
-          />
+        <Form onSubmit={handleSubmit}>
+          <FormField label="Email" htmlFor="email">
+            <Input
+              id="email"
+              type="email"
+              placeholder="ty@pk.edu.pl"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+          </FormField>
+          <FormField label="Haslo" htmlFor="password">
+            <Input
+              id="password"
+              type="password"
+              placeholder="min. 8 znakow"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+              minLength={8}
+            />
+          </FormField>
 
           {error && (
             <p className="text-ui text-danger -mt-1">{error}</p>
@@ -73,7 +77,7 @@ export default function Login() {
           >
             {loading ? 'Logowanie...' : 'Zaloguj sie'}
           </Button>
-        </form>
+        </Form>
 
         <p className="text-ui text-muted text-center mt-6">
           Nie masz konta?{' '}
