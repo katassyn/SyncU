@@ -56,9 +56,16 @@ export function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
           <a
             href="/profile"
             onClick={onClose}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-card-sm text-body font-medium text-heading hover:bg-surface-1 transition-colors"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-card-sm text-body font-medium text-heading hover:bg-surface-2 transition-colors cursor-pointer"
           >
             Profil
+          </a>
+          <a
+            href="/profile"
+            onClick={onClose}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-card-sm text-body font-medium text-heading hover:bg-surface-2 transition-colors cursor-pointer"
+          >
+            Ustawienia
           </a>
         </div>
 

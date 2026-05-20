@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from '../lib/cn';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'primary' | 'exam' | 'study' | 'colloquium';
+  variant?: 'default' | 'primary' | 'exam' | 'study' | 'colloquium' | 'success';
 }
 
 const variantClasses: Record<NonNullable<BadgeProps['variant']>, string> = {
@@ -11,6 +11,7 @@ const variantClasses: Record<NonNullable<BadgeProps['variant']>, string> = {
   exam:       'bg-[rgb(168_56_54_/_.15)] text-danger',
   study:      'bg-[rgb(65_98_128_/_.15)] text-navy-dark',
   colloquium: 'bg-primary-subtle text-heading',
+  success:    'bg-[rgb(16_185_129_/_.15)] text-success',
 };
 
 export function Badge({
