@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Card } from '@syncu/ui'
+import { Button, Card, Form, FormField } from '@syncu/ui'
 import { fetchGroups, type GroupSummary } from '../lib/api'
 
 /**
@@ -110,12 +110,10 @@ export default function Onboarding() {
         )}
 
         {state.kind === 'loaded' && (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-caption font-bold text-body tracking-label uppercase">
-                Grupa
-              </span>
+          <Form onSubmit={handleSubmit}>
+            <FormField label="Grupa" htmlFor="group">
               <select
+                id="group"
                 value={selected}
                 onChange={(e) => setSelected(e.target.value)}
                 className="bg-surface-1 rounded-pill px-4 py-2.5 text-ui text-heading border border-transparent focus:outline-none focus:border-primary focus:bg-white transition-colors"
@@ -126,7 +124,7 @@ export default function Onboarding() {
                   </option>
                 ))}
               </select>
-            </label>
+            </FormField>
 
             <Button
               type="submit"
@@ -137,7 +135,7 @@ export default function Onboarding() {
             >
               Kontynuuj
             </Button>
-          </form>
+          </Form>
         )}
 
         <p className="text-caption text-muted text-center mt-6">
