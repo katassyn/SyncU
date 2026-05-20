@@ -105,7 +105,7 @@ export default function Library() {
               'px-4 py-2.5 text-ui font-medium transition-colors cursor-pointer rounded-t-card-sm',
               activeTab === i
                 ? 'text-primary-nav border-b-2 border-primary-nav -mb-px bg-transparent'
-                : 'text-muted hover:text-heading',
+                : 'text-muted hover:text-heading hover:bg-surface-1',
             ].join(' ')}
           >
             {tab}
@@ -226,7 +226,7 @@ export default function Library() {
           </div>
           <div className="flex flex-col gap-1">
             {recentContributions.map(c => (
-              <div key={c.id} className="flex items-center justify-between py-2.5 border-b border-border-subtle last:border-0">
+              <div key={c.id} className="flex items-center justify-between py-2.5 px-2 -mx-2 rounded-card-sm border-b border-border-subtle last:border-0 hover:bg-surface-1 transition-colors duration-150 cursor-pointer">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="size-8 rounded-card-sm bg-primary-light text-primary-nav flex items-center justify-center shrink-0">
                     <NotesIcon />
@@ -252,7 +252,7 @@ export default function Library() {
           </div>
           <div className="flex flex-col gap-2">
             {trendingSubjects.map((s, i) => (
-              <div key={s.id} className="flex items-center gap-3 py-2 cursor-pointer group">
+              <div key={s.id} className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-card-sm cursor-pointer group hover:bg-surface-1 transition-colors duration-150">
                 <span className="text-badge font-bold text-muted w-5 shrink-0">{i + 1}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">

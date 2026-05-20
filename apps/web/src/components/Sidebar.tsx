@@ -20,7 +20,7 @@ export function Sidebar() {
                 'flex items-center gap-3 px-3 py-2.5 rounded-card-sm text-body font-medium transition-colors',
                 isActive
                   ? 'bg-primary text-on-primary'
-                  : 'text-heading hover:bg-surface-1',
+                  : 'text-heading hover:bg-surface-2',
               ].join(' ')
             }
           >

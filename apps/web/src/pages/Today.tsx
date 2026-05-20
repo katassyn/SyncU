@@ -291,8 +291,8 @@ export default function Today() {
                     <div className="w-px bg-border-subtle mt-1" style={{ height: '2.5rem' }} />
                   )}
                 </div>
-                <div className="flex-1 min-w-0 pb-4 last:pb-0">
-                  <p className="text-body font-semibold text-heading m-0 leading-tight truncate">{d.title}</p>
+                <div className="flex-1 min-w-0 pb-4 last:pb-0 cursor-pointer group">
+                  <p className="text-body font-semibold text-heading m-0 leading-tight truncate group-hover:text-primary-nav transition-colors duration-150">{d.title}</p>
                   <span className={['text-badge font-bold mt-0.5 inline-block', d.urgent ? 'text-danger' : 'text-muted'].join(' ')}>
                     {d.when}
                   </span>
