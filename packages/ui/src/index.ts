@@ -13,4 +13,7 @@ export type { BadgeProps } from './components/Badge';
 export { Modal } from './components/Modal';
 export type { ModalProps } from './components/Modal';
 
+export { Form, FormField } from './components/Form';
+export type { FormProps, FormFieldProps } from './components/Form';
+
 export { cn } from './lib/cn';
