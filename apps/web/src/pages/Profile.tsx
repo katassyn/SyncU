@@ -46,7 +46,7 @@ export default function Profile() {
             <Button variant="secondary" size="sm">Edytuj</Button>
           </div>
           <Form>
-            <FormField label="Imię wyświetlane" htmlFor="displayName">
+            <FormField label="Imię" htmlFor="displayName">
               <Input id="displayName" value={placeholder.displayName} readOnly />
             </FormField>
             <FormField label="Adres e-mail" htmlFor="email">

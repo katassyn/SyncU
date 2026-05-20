@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 
 import { AppLayout } from './components/AppLayout'
 import Today from './pages/Today'
+import Profile from './pages/Profile'
 import Week from './pages/Week'
 import Subject from './pages/Subject'
 import Focus from './pages/Focus'
@@ -26,6 +27,8 @@ function App() {
         <Route path="/import" element={<Import />} />
 
         {/* Auth + onboarding (G-6.9, G-6.10, G-7.4) */}
+        <Route path="/profile" element={<Profile />} />
+
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/onboarding" element={<Onboarding />} />
