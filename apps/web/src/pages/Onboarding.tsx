@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Card, Form, FormField } from '@syncu/ui'
+import { Button, Card, Form, Select } from '@syncu/ui'
 import { fetchGroups, type GroupSummary } from '../lib/api'
 
 /**
@@ -111,20 +111,18 @@ export default function Onboarding() {
 
         {state.kind === 'loaded' && (
           <Form onSubmit={handleSubmit}>
-            <FormField label="Grupa" htmlFor="group">
-              <select
-                id="group"
-                value={selected}
-                onChange={(e) => setSelected(e.target.value)}
-                className="bg-surface-1 rounded-pill px-4 py-2.5 text-ui text-heading border border-transparent focus:outline-none focus:border-primary focus:bg-white transition-colors"
-              >
-                {sortedGroups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.label}
-                  </option>
-                ))}
-              </select>
-            </FormField>
+            <Select
+              label="Grupa"
+              id="group"
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
+            >
+              {sortedGroups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.label}
+                </option>
+              ))}
+            </Select>
 
             <Button
               type="submit"
