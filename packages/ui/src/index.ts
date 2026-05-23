@@ -16,4 +16,7 @@ export type { ModalProps } from './components/Modal';
 export { Form, FormField } from './components/Form';
 export type { FormProps, FormFieldProps } from './components/Form';
 
+export { Select } from './components/Select';
+export type { SelectProps, SelectOption } from './components/Select';
+
 export { cn } from './lib/cn';
