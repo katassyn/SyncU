@@ -42,6 +42,7 @@
 
   /* Status */
   --syncu-danger:  #a83836;
+  --syncu-warning: #d97706;
   --syncu-success: #10b981;
   --syncu-neutral: #a9b4b5;
 
@@ -82,6 +83,7 @@
 
   /* Status */
   --color-danger:  var(--syncu-danger);
+  --color-warning: var(--syncu-warning);
   --color-success: var(--syncu-success);
   --color-neutral: var(--syncu-neutral);
 

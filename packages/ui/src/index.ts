@@ -19,4 +19,7 @@ export type { FormProps, FormFieldProps } from './components/Form';
 export { Select } from './components/Select';
 export type { SelectProps, SelectOption } from './components/Select';
 
+export { ExamCard } from './components/ExamCard';
+export type { ExamCardProps } from './components/ExamCard';
+
 export { cn } from './lib/cn';
