@@ -102,6 +102,17 @@ Content-Type: application/json
 GET {{baseUrl}}/auth/me
 Authorization: Bearer {{authToken}}
 
+### Update current user profile
+PATCH {{baseUrl}}/me
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "fieldOfStudy": "Informatyka Stosowana",
+  "yearOfStudy": 3,
+  "groupId": "32_1"
+}
+
 ### Logout user
 POST {{baseUrl}}/auth/logout
 Content-Type: application/json

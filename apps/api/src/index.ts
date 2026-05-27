@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import logixlysia from "logixlysia";
 import { authRoutes } from "./handlers/auth";
+import { meRoutes } from "./handlers/me";
 import { scheduleRoutes } from "./handlers/schedule";
 import { timetableRoutes } from "./handlers/timetable";
 
@@ -25,6 +26,7 @@ const app = new Elysia()
 		})
 	)
 	.use(authRoutes)
+	.use(meRoutes)
 	.use(scheduleRoutes)
 	.use(timetableRoutes)
 	.get("/", () => ({ name: "SyncU API", status: "ok" }))

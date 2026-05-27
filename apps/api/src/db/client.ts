@@ -26,4 +26,16 @@ try {
 		throw err;
 }
 
+function ensureUsersGroupIdColumn() {
+	const columns = sqlite
+		.query("PRAGMA table_info(users)")
+		.all() as Array<{ name: string }>;
+
+	if (columns.length > 0 && !columns.some((column) => column.name === "group_id")) {
+		sqlite.run("ALTER TABLE users ADD COLUMN group_id text");
+	}
+}
+
+ensureUsersGroupIdColumn();
+
 export type DbClient = typeof db;
