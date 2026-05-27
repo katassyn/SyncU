@@ -2,7 +2,9 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { unlinkSync } from "fs";
 import type { ScheduleData } from "@syncu/types";
 
-const TEST_DB_PATH = "/tmp/syncu-test-schedule.db";
+const TEST_DB_PATH = `/tmp/syncu-test-schedule-${Date.now()}-${Math.random()
+  .toString(16)
+  .slice(2)}.db`;
 
 // Set env before importing db module
 process.env.DB_PATH = TEST_DB_PATH;
@@ -17,7 +19,9 @@ const {
   getEntriesByLecturerAbbr,
   getLecturerByNormalizedAbbr,
   getFullScheduleData,
+  getRecentScheduleChanges,
 } = await import("../db/index");
+const { sqlite } = await import("../db/client");
 
 const normalize = (s: string) => s.toLowerCase().trim();
 
@@ -57,6 +61,36 @@ const testData: ScheduleData = {
   lecturers: [
     { abbr: "AB", name: "Adam Baran", email: "ab@example.com" },
     { abbr: "CD", name: "Celina Duda", email: "cd@example.com" },
+  ],
+};
+
+const changedData: ScheduleData = {
+  sourceUrl: "https://example.com/changed.xls",
+  sections: [
+    {
+      id: "INF-1-S1-G1",
+      label: "Informatyka G1",
+      yearSemLabel: "Rok 1 Sem 1",
+      groupId: "INF-1-S1",
+      entries: [
+        { time: "08:00-09:30", date: "2026-04-25", subject: "Matematyka Dyskretna (AB)" },
+        { time: "12:00-13:30", date: "2026-04-25", subject: "Programowanie (EF)" },
+      ],
+    },
+    {
+      id: "INF-1-S1-G2",
+      label: "Informatyka G2",
+      yearSemLabel: "Rok 1 Sem 1",
+      groupId: "INF-1-S1",
+      entries: [
+        { time: "08:00-09:30", date: "2026-04-25", subject: "Fizyka (CD)" },
+      ],
+    },
+  ],
+  lecturers: [
+    { abbr: "AB", name: "Adam Baran", email: "ab@example.com" },
+    { abbr: "CD", name: "Celina Duda", email: "cd@example.com" },
+    { abbr: "EF", name: "Ewa Filipska", email: "ef@example.com" },
   ],
 };
 
@@ -133,5 +167,44 @@ describe("schedule DB", () => {
     expect(getCachedFilename()).toBe("new-file.xls");
     expect(getAllSections()).toHaveLength(0);
     expect(getAllLecturers()).toHaveLength(0);
+  });
+
+  test("stores recent added, removed and modified schedule changes", () => {
+    sqlite.run("DELETE FROM schedule_changes");
+    sqlite.run("DELETE FROM entries");
+    sqlite.run("DELETE FROM sections");
+    sqlite.run("DELETE FROM lecturers");
+    sqlite.run("DELETE FROM schedule_meta");
+
+    saveSchedule(testData, "baseline.xls", normalize);
+    saveSchedule(changedData, "changed.xls", normalize);
+
+    const changes = getRecentScheduleChanges("INF-1-S1", 30);
+
+    expect(changes).toHaveLength(3);
+    expect(changes.map((change) => change.changeType).sort()).toEqual([
+      "added",
+      "modified",
+      "removed",
+    ]);
+
+    const modified = changes.find((change) => change.changeType === "modified");
+    const added = changes.find((change) => change.changeType === "added");
+    const removed = changes.find((change) => change.changeType === "removed");
+
+    expect(modified?.scheduleId).toContain("matematyka dyskretna (ab)");
+    expect(JSON.parse(modified!.prevDataJson!)).toMatchObject({
+      subject: "Matematyka (AB)",
+      time: "08:00-09:30",
+    });
+
+    expect(added?.scheduleId).toContain("programowanie (ef)");
+    expect(added?.prevDataJson).toBeNull();
+
+    expect(removed?.scheduleId).toContain("10:00-11:30");
+    expect(JSON.parse(removed!.prevDataJson!)).toMatchObject({
+      subject: "Fizyka (CD)",
+      time: "10:00-11:30",
+    });
   });
 });
