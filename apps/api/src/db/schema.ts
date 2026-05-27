@@ -9,6 +9,7 @@ export const users = sqliteTable(
 		university: text("university"),
 		fieldOfStudy: text("field_of_study"),
 		yearOfStudy: integer("year_of_study"),
+		groupId: text("group_id"),
 		createdAt: text("created_at").notNull(),
 		updatedAt: text("updated_at").notNull(),
 	},

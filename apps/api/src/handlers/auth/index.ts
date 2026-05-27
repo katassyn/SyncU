@@ -2,6 +2,14 @@ import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../../db/client";
 import { authCredentials, users } from "../../db/schema";
+import {
+	generateSalt,
+	getAuthenticatedUser,
+	getCurrentTimestamp,
+	getCurrentUnixTimestamp,
+	signJwt,
+	toAuthUser,
+} from "./shared";
 
 const registerBody = t.Object({
 	email: t.String({ format: "email", maxLength: 255 }),
@@ -16,159 +24,6 @@ const loginBody = t.Object({
 	email: t.String({ format: "email", maxLength: 255 }),
 	password: t.String({ minLength: 8, maxLength: 128 }),
 });
-
-type AuthUser = {
-	id: number;
-	email: string;
-	displayName: string;
-	university: string | null;
-	fieldOfStudy: string | null;
-	yearOfStudy: number | null;
-	createdAt: string;
-	updatedAt: string;
-};
-
-type JwtPayload = {
-	sub: number;
-	email: string;
-	iat: number;
-	exp: number;
-};
-
-function getCurrentTimestamp(): string {
-	return new Date().toISOString();
-}
-
-function getCurrentUnixTimestamp(): number {
-	return Math.floor(Date.now() / 1000);
-}
-
-function generateSalt(): string {
-	return Array.from(crypto.getRandomValues(new Uint8Array(16)))
-		.map((byte) => byte.toString(16).padStart(2, "0"))
-		.join("");
-}
-
-function getJwtSecret(): string {
-	return process.env.JWT_SECRET ?? "syncu-dev-secret";
-}
-
-function encodeBase64Url(input: string | Uint8Array): string {
-	const bytes = typeof input === "string" ? new TextEncoder().encode(input) : input;
-	let binary = "";
-	for (const byte of bytes) {
-		binary += String.fromCharCode(byte);
-	}
-	return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-
-async function signJwt(payload: Record<string, unknown>): Promise<string> {
-	const header = {
-		alg: "HS256",
-		typ: "JWT",
-	};
-
-	const encodedHeader = encodeBase64Url(JSON.stringify(header));
-	const encodedPayload = encodeBase64Url(JSON.stringify(payload));
-	const data = `${encodedHeader}.${encodedPayload}`;
-
-	const cryptoKey = await crypto.subtle.importKey(
-		"raw",
-		new TextEncoder().encode(getJwtSecret()),
-		{ name: "HMAC", hash: "SHA-256" },
-		false,
-		["sign"],
-	);
-	const signature = await crypto.subtle.sign(
-		"HMAC",
-		cryptoKey,
-		new TextEncoder().encode(data),
-	);
-
-	return `${data}.${encodeBase64Url(new Uint8Array(signature))}`;
-}
-
-function decodeBase64Url(input: string): string {
-	const base64 = input.replace(/-/g, "+").replace(/_/g, "/");
-	const padding = "=".repeat((4 - (base64.length % 4)) % 4);
-	return atob(`${base64}${padding}`);
-}
-
-function isJwtPayload(value: unknown): value is JwtPayload {
-	const candidate = value as Record<string, unknown> | null;
-
-	return (
-		!!candidate &&
-		typeof candidate === "object" &&
-		typeof candidate.sub === "number" &&
-		typeof candidate.email === "string" &&
-		typeof candidate.iat === "number" &&
-		typeof candidate.exp === "number"
-	);
-}
-
-async function verifyJwt(token: string): Promise<JwtPayload | null> {
-	const parts = token.split(".");
-
-	if (parts.length !== 3) {
-		return null;
-	}
-
-	const [encodedHeader, encodedPayload, encodedSignature] = parts;
-	const data = `${encodedHeader}.${encodedPayload}`;
-	let signatureBytes: Uint8Array;
-	let payload: unknown;
-
-	try {
-		signatureBytes = Uint8Array.from(decodeBase64Url(encodedSignature), (char) =>
-			char.charCodeAt(0),
-		);
-		payload = JSON.parse(decodeBase64Url(encodedPayload));
-	} catch {
-		return null;
-	}
-
-	const cryptoKey = await crypto.subtle.importKey(
-		"raw",
-		new TextEncoder().encode(getJwtSecret()),
-		{ name: "HMAC", hash: "SHA-256" },
-		false,
-		["verify"],
-	);
-	const isValid = await crypto.subtle.verify(
-		"HMAC",
-		cryptoKey,
-		signatureBytes,
-		new TextEncoder().encode(data),
-	);
-
-	if (!isValid) {
-		return null;
-	}
-
-	if (!isJwtPayload(payload)) {
-		return null;
-	}
-
-	if (payload.exp <= getCurrentUnixTimestamp()) {
-		return null;
-	}
-
-	return payload;
-}
-
-function toAuthUser(user: AuthUser) {
-	return {
-		id: user.id,
-		email: user.email,
-		displayName: user.displayName,
-		university: user.university,
-		fieldOfStudy: user.fieldOfStudy,
-		yearOfStudy: user.yearOfStudy,
-		createdAt: user.createdAt,
-		updatedAt: user.updatedAt,
-	};
-}
 
 export const authRoutes = new Elysia({ prefix: "/auth" })
 	.post(
@@ -202,6 +57,7 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
 					university: body.university ?? null,
 					fieldOfStudy: body.fieldOfStudy ?? null,
 					yearOfStudy: body.yearOfStudy ?? null,
+					groupId: null,
 					createdAt: now,
 					updatedAt: now,
 				})
@@ -244,6 +100,7 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
 				university: users.university,
 				fieldOfStudy: users.fieldOfStudy,
 				yearOfStudy: users.yearOfStudy,
+				groupId: users.groupId,
 				createdAt: users.createdAt,
 				updatedAt: users.updatedAt,
 			})
@@ -291,6 +148,7 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
 				university: credential.university,
 				fieldOfStudy: credential.fieldOfStudy,
 				yearOfStudy: credential.yearOfStudy,
+				groupId: credential.groupId,
 				createdAt: credential.createdAt,
 				updatedAt: credential.updatedAt,
 			}),
@@ -301,39 +159,7 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
 	},
 )
 	.get("/me", async ({ headers, set }) => {
-		const authorization = headers.authorization;
-
-		if (!authorization?.startsWith("Bearer ")) {
-			set.status = 401;
-			return {
-				message: "Unauthorized.",
-			};
-		}
-
-		const token = authorization.slice("Bearer ".length).trim();
-		const payload = await verifyJwt(token);
-
-		if (!payload) {
-			set.status = 401;
-			return {
-				message: "Unauthorized.",
-			};
-		}
-
-		const user = db
-			.select({
-				id: users.id,
-				email: users.email,
-				displayName: users.displayName,
-				university: users.university,
-				fieldOfStudy: users.fieldOfStudy,
-				yearOfStudy: users.yearOfStudy,
-				createdAt: users.createdAt,
-				updatedAt: users.updatedAt,
-			})
-			.from(users)
-			.where(eq(users.id, payload.sub))
-			.get();
+		const user = await getAuthenticatedUser(headers.authorization);
 
 		if (!user) {
 			set.status = 401;
@@ -347,19 +173,9 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
 		};
 	})
 	.post("/logout", async ({ headers, set }) => {
-		const authorization = headers.authorization;
+		const user = await getAuthenticatedUser(headers.authorization);
 
-		if (!authorization?.startsWith("Bearer ")) {
-			set.status = 401;
-			return {
-				message: "Unauthorized.",
-			};
-		}
-
-		const token = authorization.slice("Bearer ".length).trim();
-		const payload = await verifyJwt(token);
-
-		if (!payload) {
+		if (!user) {
 			set.status = 401;
 			return {
 				message: "Unauthorized.",
