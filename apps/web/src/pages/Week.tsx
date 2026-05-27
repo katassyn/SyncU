@@ -5,6 +5,7 @@ import { normalize } from '@syncu/core'
 import { Button, Card } from '@syncu/ui'
 import { fetchGroupSchedule, fetchGroups, type GroupSummary } from '../lib/api'
 import { addDays, formatDDMM, startOfWeek } from '../lib/week'
+import { ChangeNotice } from '../components/ChangeNotice'
 import { WeekDatePicker } from '../components/WeekDatePicker'
 import { WeekGrid } from '../components/WeekGrid'
 import { PageShell } from './PageShell'
@@ -140,6 +141,11 @@ export default function Week() {
           </button>
         ))}
       </div>
+
+      {/* Change notice */}
+      {state.kind === 'loaded' && (
+        <ChangeNotice groupId={state.selected} />
+      )}
 
       {/* Error (no groups) */}
       {state.kind === 'error' && !state.groups && (

@@ -12,6 +12,7 @@ import {
   getEntriesByLecturerAbbr,
   getLecturerByNormalizedAbbr,
   getFullScheduleData,
+  getRecentScheduleChanges,
 } from "../../db";
 
 async function ensureFreshData(): Promise<void> {
@@ -62,6 +63,14 @@ export const scheduleRoutes = new Elysia({ prefix: "/schedule" })
       };
     },
     { params: t.Object({ groupId: t.String() }) }
+  )
+  .get(
+    "/changes",
+    ({ query }) => {
+      const changes = getRecentScheduleChanges(query.groupId);
+      return { count: changes.length, changes };
+    },
+    { query: t.Object({ groupId: t.String() }) }
   )
   .get(
     "/lecturer/:abbr",
