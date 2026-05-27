@@ -5,6 +5,7 @@ import type {
   LecturerInfo,
 } from "@syncu/types";
 import { sqlite } from "./client";
+import { detectScheduleChanges } from "./schedule-changes";
 
 function getDb() {
   return sqlite;
@@ -30,6 +31,8 @@ export function saveSchedule(
   normalizeFn: (s: string) => string
 ): void {
   const d = getDb();
+  const previousData = getCachedFilename() ? getFullScheduleData() : null;
+  const changes = detectScheduleChanges(previousData, data, normalizeFn);
   const tx = d.transaction(() => {
     d.run("DELETE FROM entries");
     d.run("DELETE FROM sections");
@@ -75,8 +78,51 @@ export function saveSchedule(
         lect.email
       );
     }
+
+    if (changes.length > 0) {
+      const insertChange = d.prepare(
+        "INSERT INTO schedule_changes (schedule_id, change_type, changed_at, prev_data_json) VALUES (?, ?, ?, ?)"
+      );
+      const changedAt = new Date().toISOString();
+      for (const change of changes) {
+        insertChange.run(
+          change.scheduleId,
+          change.changeType,
+          changedAt,
+          change.prevDataJson
+        );
+      }
+    }
   });
   tx();
+}
+
+export type ScheduleChangeRecord = {
+  id: number;
+  scheduleId: string;
+  changeType: "added" | "removed" | "modified";
+  changedAt: string;
+  prevDataJson: string | null;
+};
+
+export function getRecentScheduleChanges(
+  groupIdPrefix: string,
+  days = 7
+): ScheduleChangeRecord[] {
+  const threshold = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  return getDb()
+    .query(
+      `SELECT id,
+              schedule_id AS scheduleId,
+              change_type AS changeType,
+              changed_at AS changedAt,
+              prev_data_json AS prevDataJson
+       FROM schedule_changes
+       WHERE schedule_id LIKE ? || '%'
+         AND changed_at >= ?
+       ORDER BY changed_at DESC, id DESC`
+    )
+    .all(groupIdPrefix, threshold) as ScheduleChangeRecord[];
 }
 
 export function getAllSections(): Omit<SectionSchedule, "entries">[] {
