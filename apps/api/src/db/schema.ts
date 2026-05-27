@@ -152,6 +152,22 @@ export const exams = sqliteTable(
 	}),
 );
 
+export const scheduleChanges = sqliteTable(
+	"schedule_changes",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		scheduleId: text("schedule_id").notNull(),
+		changeType: text("change_type").notNull(),
+		changedAt: text("changed_at").notNull(),
+		prevDataJson: text("prev_data_json"),
+	},
+	(table) => ({
+		scheduleIdIdx: index("idx_schedule_changes_schedule_id").on(table.scheduleId),
+		changedAtIdx: index("idx_schedule_changes_changed_at").on(table.changedAt),
+		changeTypeIdx: index("idx_schedule_changes_change_type").on(table.changeType),
+	}),
+);
+
 export const scheduleMeta = sqliteTable("schedule_meta", {
 	id: integer("id").primaryKey(),
 	xlsFilename: text("xls_filename").notNull(),
