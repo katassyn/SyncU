@@ -52,3 +52,20 @@ export function fetchGroups(): Promise<GroupsResponse> {
 export function fetchGroupSchedule(groupId: string): Promise<ScheduleData> {
   return request<ScheduleData>(`/schedule/group/${encodeURIComponent(groupId)}`)
 }
+
+export type ScheduleChangeRecord = {
+  id: number
+  scheduleId: string
+  changeType: 'added' | 'removed' | 'modified'
+  changedAt: string
+  prevDataJson: string | null
+}
+
+export type ScheduleChangesResponse = {
+  count: number
+  changes: ScheduleChangeRecord[]
+}
+
+export function fetchScheduleChanges(groupId: string): Promise<ScheduleChangesResponse> {
+  return request<ScheduleChangesResponse>(`/schedule/changes?groupId=${encodeURIComponent(groupId)}`)
+}

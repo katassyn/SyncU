@@ -1,15 +1,24 @@
 import type { WeekEvent, ClassSessionType } from '@syncu/types';
 
+export type ChangeStatus = 'new' | 'changed' | 'removed';
+
 interface ScheduleCardProps {
   event: WeekEvent;
   column: number;
   rowStart: number;
   rowSpan: number;
+  changeStatus?: ChangeStatus;
 }
 
 // Krotkie labelki - dziala w waskich kolumnach kalendarza bez ucinania.
 // Pelne nazwy (Wykład, Projekt, Seminarium, Egzamin) sa za dlugie na badge
 // w typowej kolumnie tygodnia.
+const CHANGE_CONFIG: Record<ChangeStatus, { badge: string; label: string }> = {
+  new:     { badge: 'bg-[rgb(16_185_129_/_.15)] text-success', label: 'Nowe'     },
+  changed: { badge: 'bg-[rgb(217_119_6_/_.15)] text-warning',  label: 'Zmiana'   },
+  removed: { badge: 'bg-danger/15 text-danger',                label: 'Usunięto' },
+};
+
 const TYPE_CONFIG: Record<ClassSessionType, { card: string; badge: string; label: string }> = {
   lecture: {
     card:  'bg-primary-light border-primary',
@@ -38,21 +47,34 @@ const TYPE_CONFIG: Record<ClassSessionType, { card: string; badge: string; label
   },
 };
 
-export function ScheduleCard({ event, column, rowStart, rowSpan }: ScheduleCardProps) {
+export function ScheduleCard({ event, column, rowStart, rowSpan, changeStatus }: ScheduleCardProps) {
   const cfg = TYPE_CONFIG[event.type];
+  const chg = changeStatus ? CHANGE_CONFIG[changeStatus] : null;
 
   return (
     <div
       className={[
-        'rounded-card-sm px-2 py-1.5 overflow-hidden min-w-0 z-10',
+        'relative rounded-card-sm px-2 py-1.5 overflow-hidden min-w-0 z-10',
         'border-l-[3px] flex flex-col gap-px',
         cfg.card,
-      ].join(' ')}
+        changeStatus === 'removed' && 'opacity-50',
+      ].filter(Boolean).join(' ')}
       style={{
         gridColumn: column + 2,
         gridRow: `${rowStart} / span ${rowSpan}`,
       }}
     >
+      {/* Badge zmiany — prawy górny róg */}
+      {chg && (
+        <span className={[
+          'absolute top-1 right-1 z-20',
+          'text-badge font-bold uppercase tracking-badge rounded-pill px-1.5 leading-tight',
+          chg.badge,
+        ].join(' ')}>
+          {chg.label}
+        </span>
+      )}
+
       {/* Wiersz: godziny + badge typu */}
       <div className="flex items-center justify-between gap-1 min-w-0">
         <span className="text-badge text-muted tabular-nums shrink-0 leading-tight">
@@ -70,7 +92,10 @@ export function ScheduleCard({ event, column, rowStart, rowSpan }: ScheduleCardP
          Bez `line-clamp` / `truncate` -> nigdy nie ma "..." kropkowych.
          Co nie zmiesci sie pionowo, zostanie po prostu schowane przez
          `overflow-hidden` rodzica (wizualnie obciete bez "..."). */}
-      <p className="text-badge font-bold leading-tight text-heading break-words">
+      <p className={[
+        'text-badge font-bold leading-tight text-heading break-words',
+        changeStatus === 'removed' && 'line-through',
+      ].filter(Boolean).join(' ')}>
         {event.title}
       </p>
 
