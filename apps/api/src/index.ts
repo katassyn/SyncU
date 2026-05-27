@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import logixlysia from "logixlysia";
 import { authRoutes } from "./handlers/auth";
+import { examsRoutes } from "./handlers/exams";
 import { meRoutes } from "./handlers/me";
 import { scheduleRoutes } from "./handlers/schedule";
 import { timetableRoutes } from "./handlers/timetable";
@@ -26,6 +27,7 @@ const app = new Elysia()
 		})
 	)
 	.use(authRoutes)
+	.use(examsRoutes)
 	.use(meRoutes)
 	.use(scheduleRoutes)
 	.use(timetableRoutes)

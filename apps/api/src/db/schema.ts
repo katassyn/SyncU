@@ -131,6 +131,27 @@ export const classSessions = sqliteTable(
 	}),
 );
 
+export const exams = sqliteTable(
+	"exams",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		userId: integer("user_id")
+			.notNull()
+			.references(() => users.id),
+		courseId: integer("course_id")
+			.notNull()
+			.references(() => courses.id),
+		date: text("date").notNull(),
+		scope: text("scope"),
+		createdAt: text("created_at").notNull(),
+	},
+	(table) => ({
+		userIdIdx: index("idx_exams_user_id").on(table.userId),
+		courseIdIdx: index("idx_exams_course_id").on(table.courseId),
+		dateIdx: index("idx_exams_date").on(table.date),
+	}),
+);
+
 export const scheduleMeta = sqliteTable("schedule_meta", {
 	id: integer("id").primaryKey(),
 	xlsFilename: text("xls_filename").notNull(),
