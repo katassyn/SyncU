@@ -59,6 +59,16 @@ export interface ImportResult {
   errorMessage: string | null;
 }
 
+export interface Exam {
+  id: number;
+  userId: number;
+  courseId: number;
+  courseName: string;
+  date: string;
+  scope: string | null;
+  createdAt: string;
+}
+
 export interface WeekSchedule {
   weekStart: string;
   weekEnd: string;
