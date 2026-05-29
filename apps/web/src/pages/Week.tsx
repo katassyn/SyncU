@@ -3,16 +3,40 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import type { ClassSessionType, ScheduleData, ScheduleEntry, WeekEvent } from '@syncu/types'
 import { normalize } from '@syncu/core'
 import { Button, Card } from '@syncu/ui'
-import { fetchGroupSchedule, fetchGroups, type GroupSummary } from '../lib/api'
-import { addDays, formatDDMM, startOfWeek } from '../lib/week'
+import {
+  fetchGroupSchedule,
+  fetchGroups,
+  fetchScheduleChanges,
+  type GroupSummary,
+  type ScheduleChangeRecord,
+} from '../lib/api'
+import {
+  addDays,
+  addMonths,
+  formatDDMM,
+  formatMonthLabel,
+  monthGridDates,
+  startOfMonth,
+  startOfWeek,
+} from '../lib/week'
 import { ChangeNotice } from '../components/ChangeNotice'
+import { MonthGrid } from '../components/MonthGrid'
 import { WeekDatePicker } from '../components/WeekDatePicker'
-import { WeekGrid } from '../components/WeekGrid'
+import { WeekGrid, type EventChangeInfo } from '../components/WeekGrid'
+import type { ChangeStatus } from '../components/ScheduleCard'
 import { PageShell } from './PageShell'
+
+const LS_LAST_VISIT_KEY = 'syncu.lastVisitedWeek'
+
+const CHANGE_STATUS: Record<ScheduleChangeRecord['changeType'], ChangeStatus> = {
+  added: 'new',
+  modified: 'changed',
+  removed: 'removed',
+}
 
 const LS_GROUP_KEY = 'syncu.selectedGroup'
 
-type View = 'day' | 'week'
+type View = 'day' | 'week' | 'month'
 
 type State =
   | { kind: 'loadingGroups' }
@@ -39,7 +63,32 @@ export default function Week() {
   const [state, setState] = useState<State>({ kind: 'loadingGroups' })
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
   const [selectedDate, setSelectedDate] = useState<Date>(() => dayStart())
+  const [monthDate, setMonthDate] = useState<Date>(() => startOfMonth(new Date()))
+  const [changes, setChanges] = useState<ScheduleChangeRecord[]>([])
+  const [toast, setToast] = useState<string | null>(null)
   const navigate = useNavigate()
+
+  // G-9: fetch zmian dla wybranej grupy + toast jezeli sa swieze od ostatniej wizyty
+  const loadedSelected = state.kind === 'loaded' ? state.selected : null
+  useEffect(() => {
+    if (!loadedSelected) {
+      setChanges([])
+      return
+    }
+    let cancelled = false
+    fetchScheduleChanges(loadedSelected)
+      .then((res) => {
+        if (cancelled) return
+        setChanges(res.changes)
+        maybeShowToast(res.changes, setToast)
+      })
+      .catch(() => {
+        if (!cancelled) setChanges([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [loadedSelected])
 
   useEffect(() => {
     let cancelled = false
@@ -102,6 +151,34 @@ export default function Week() {
 
   const isEmpty = state.kind === 'loaded' && events.length === 0
 
+  // G-9: mapa "date|time|subject" -> rekord zmiany
+  const changeByKey = useMemo(() => {
+    const m = new Map<string, ScheduleChangeRecord>()
+    for (const c of changes) {
+      // scheduleId format: "<section>|<date>|<time>|<subject>"
+      const parts = c.scheduleId.split('|')
+      if (parts.length >= 4) {
+        m.set(`${parts[1]}|${parts[2]}|${parts[3]}`, c)
+      }
+    }
+    return m
+  }, [changes])
+
+  // G-9: id eventu -> {status badge, detail tooltip}. Klucz idx zgadza sie z
+  // events.id (oba liczone na tej samej tablicy entries).
+  const changeInfo = useMemo((): Map<number, EventChangeInfo> => {
+    const m = new Map<number, EventChangeInfo>()
+    if (state.kind !== 'loaded' || changeByKey.size === 0) return m
+    const entries = state.data.sections.flatMap((s) => s.entries)
+    entries.forEach((entry, idx) => {
+      const day = weekDates.findIndex((d) => formatDDMM(d) === entry.date)
+      if (day === -1) return
+      const rec = changeByKey.get(`${entry.date}|${entry.time}|${entry.subject}`)
+      if (rec) m.set(idx, recordToInfo(rec))
+    })
+    return m
+  }, [state, weekDates, changeByKey])
+
   // --- day view ---
   const today = useMemo(() => dayStart(), [])
   const isToday = selectedDate.getTime() === today.getTime()
@@ -115,17 +192,34 @@ export default function Week() {
       .sort((a, b) => a.time.localeCompare(b.time))
   }, [state, selectedDate])
 
+  // --- month view ---
+  const monthCells = useMemo(() => monthGridDates(monthDate), [monthDate])
+
+  const entriesByDay = useMemo((): Map<string, ScheduleEntry[]> => {
+    const map = new Map<string, ScheduleEntry[]>()
+    if (state.kind !== 'loaded') return map
+    for (const entry of state.data.sections.flatMap((s) => s.entries)) {
+      const list = map.get(entry.date) ?? []
+      list.push(entry)
+      map.set(entry.date, list)
+    }
+    return map
+  }, [state])
+
   const hasData =
     state.kind === 'loadingSchedule' ||
     state.kind === 'loaded' ||
     (state.kind === 'error' && state.groups)
 
   return (
-    <PageShell title="Plan zajęć" subtitle={view === 'day' ? 'Widok dzienny' : 'Widok tygodniowy'}>
+    <PageShell title="Plan zajęć" subtitle={VIEW_SUBTITLE[view]}>
 
-      {/* Toggle Dziś / Tydzień */}
+      {/* G-9: toast o swiezych zmianach planu */}
+      {toast && <ChangeToast message={toast} onClose={() => setToast(null)} />}
+
+      {/* Toggle Dziś / Tydzień / Miesiąc */}
       <div className="flex gap-1 mb-6">
-        {(['day', 'week'] as View[]).map((v) => (
+        {(['day', 'week', 'month'] as View[]).map((v) => (
           <button
             key={v}
             type="button"
@@ -137,7 +231,7 @@ export default function Week() {
                 : 'bg-surface-1 text-heading hover:bg-surface-2',
             ].join(' ')}
           >
-            {v === 'day' ? 'Dziś' : 'Tydzień'}
+            {VIEW_LABEL[v]}
           </button>
         ))}
       </div>
@@ -253,7 +347,35 @@ export default function Week() {
           )}
 
           {state.kind === 'loaded' && events.length > 0 && (
-            <WeekGrid events={events} weekDates={weekDates} />
+            <WeekGrid events={events} weekDates={weekDates} changeInfo={changeInfo} />
+          )}
+        </>
+      )}
+
+      {/* ── Month view ── */}
+      {view === 'month' && (
+        <>
+          <MonthNav
+            monthDate={monthDate}
+            onPrev={() => setMonthDate((d) => addMonths(d, -1))}
+            onNext={() => setMonthDate((d) => addMonths(d, 1))}
+            onToday={() => setMonthDate(startOfMonth(new Date()))}
+          />
+
+          {(state.kind === 'loadingGroups' || state.kind === 'loadingSchedule') && (
+            <div className="h-96 rounded-card-sm bg-surface-1 animate-pulse" />
+          )}
+
+          {state.kind === 'loaded' && (
+            <MonthGrid
+              monthDate={monthDate}
+              gridDates={monthCells}
+              entriesByDay={entriesByDay}
+              onSelectDay={(date) => {
+                setSelectedDate(dayStart(date))
+                setView('day')
+              }}
+            />
           )}
         </>
       )}
@@ -262,7 +384,73 @@ export default function Week() {
   )
 }
 
+const VIEW_LABEL: Record<View, string> = {
+  day: 'Dziś',
+  week: 'Tydzień',
+  month: 'Miesiąc',
+}
+
+const VIEW_SUBTITLE: Record<View, string> = {
+  day: 'Widok dzienny',
+  week: 'Widok tygodniowy',
+  month: 'Widok miesięczny',
+}
+
 /* --- helpers --- */
+
+/** G-9: zamienia rekord zmiany na badge status + tekst tooltipa. */
+function recordToInfo(rec: ScheduleChangeRecord): EventChangeInfo {
+  const status = CHANGE_STATUS[rec.changeType]
+  let detail: string | undefined
+  if (rec.changeType === 'added') {
+    detail = 'Nowe zajecia w planie'
+  } else if (rec.changeType === 'modified') {
+    detail = 'Zmienione zajecia'
+    if (rec.prevDataJson) {
+      try {
+        const prev = JSON.parse(rec.prevDataJson) as { subject?: string }
+        if (prev?.subject) detail += ` (poprzednio: ${prev.subject})`
+      } catch {
+        // ignore - prevDataJson nie jest poprawnym JSON-em
+      }
+    }
+  }
+  return { status, detail }
+}
+
+/**
+ * G-9: pokazuje toast jezeli sa zmiany nowsze niz ostatnia wizyta usera.
+ * Pierwsza wizyta (brak zapisanego czasu) nie wyzwala toasta - tylko zapisuje
+ * czas, zeby nie spamowac przy pierwszym wejsciu.
+ */
+function maybeShowToast(
+  records: ScheduleChangeRecord[],
+  setToast: (msg: string) => void,
+): void {
+  if (records.length === 0) return
+  let lastVisit = 0
+  try {
+    lastVisit = Number(localStorage.getItem(LS_LAST_VISIT_KEY) ?? 0)
+  } catch {
+    // ignore
+  }
+
+  const times = records.map((r) => new Date(r.changedAt).getTime())
+  const newest = Math.max(...times)
+  const freshCount = times.filter((t) => t > lastVisit).length
+
+  if (lastVisit > 0 && freshCount > 0) {
+    setToast(
+      `${freshCount} ${freshCount === 1 ? 'nowa zmiana' : 'nowych zmian'} w planie od ostatniej wizyty`,
+    )
+  }
+
+  try {
+    localStorage.setItem(LS_LAST_VISIT_KEY, String(newest))
+  } catch {
+    // ignore
+  }
+}
 
 function inferSessionType(subject: string): ClassSessionType {
   const s = normalize(subject)
@@ -391,6 +579,70 @@ function DayNav({
         →
       </Button>
       <span className="ml-3 text-ui font-semibold text-heading capitalize">{label}</span>
+    </div>
+  )
+}
+
+/** G-9: toast o swiezych zmianach - fixed bottom-right, auto-dismiss po 6s. */
+function ChangeToast({
+  message,
+  onClose,
+}: {
+  message: string
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const id = setTimeout(onClose, 6000)
+    return () => clearTimeout(id)
+  }, [onClose])
+
+  return (
+    <div
+      role="status"
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-3 max-w-sm rounded-card bg-warning text-on-primary shadow-card px-4 py-3"
+    >
+      <span className="text-ui font-semibold">{message}</span>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Zamknij"
+        className="text-on-primary/80 hover:text-on-primary text-lg leading-none cursor-pointer shrink-0"
+      >
+        ×
+      </button>
+    </div>
+  )
+}
+
+function MonthNav({
+  monthDate,
+  onPrev,
+  onNext,
+  onToday,
+}: {
+  monthDate: Date
+  onPrev: () => void
+  onNext: () => void
+  onToday: () => void
+}) {
+  const isCurrentMonth =
+    monthDate.getFullYear() === new Date().getFullYear() &&
+    monthDate.getMonth() === new Date().getMonth()
+
+  return (
+    <div className="flex items-center gap-2 mb-4 flex-wrap">
+      <Button type="button" variant="secondary" size="sm" onClick={onPrev} aria-label="Poprzedni miesiąc">
+        ←
+      </Button>
+      <Button type="button" variant="secondary" size="sm" onClick={onToday} disabled={isCurrentMonth}>
+        Dziś
+      </Button>
+      <Button type="button" variant="secondary" size="sm" onClick={onNext} aria-label="Następny miesiąc">
+        →
+      </Button>
+      <span className="ml-3 text-ui font-semibold text-heading">
+        {formatMonthLabel(monthDate)}
+      </span>
     </div>
   )
 }

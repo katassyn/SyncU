@@ -11,6 +11,7 @@
  */
 
 import type { ScheduleData, WeekSchedule } from '@syncu/types'
+import { getStoredToken } from './auth'
 
 const API_BASE: string =
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001'
@@ -27,13 +28,25 @@ export type GroupsResponse = {
   sourceUrl: string
 }
 
-async function request<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`)
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, init)
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new Error(`HTTP ${res.status} ${res.statusText}${text ? ': ' + text : ''}`)
   }
   return (await res.json()) as T
+}
+
+/** Request z naglowkiem Authorization: Bearer (dla chronionych endpointow). */
+function authedRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const token = getStoredToken()
+  return request<T>(path, {
+    ...init,
+    headers: {
+      ...(init.headers ?? {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  })
 }
 
 /**
@@ -68,4 +81,25 @@ export type ScheduleChangesResponse = {
 
 export function fetchScheduleChanges(groupId: string): Promise<ScheduleChangesResponse> {
   return request<ScheduleChangesResponse>(`/schedule/changes?groupId=${encodeURIComponent(groupId)}`)
+}
+
+/* --- kolokwia (G-8 / G-12) --- */
+
+export type ExamRecord = {
+  id: number
+  userId: number
+  courseId: number
+  courseName: string
+  date: string // ISO datetime
+  scope: string | null
+  createdAt: string
+}
+
+export type ExamsResponse = {
+  exams: ExamRecord[]
+}
+
+/** GET /exams - kolokwia zalogowanego usera (wymaga tokenu). */
+export function fetchExams(): Promise<ExamsResponse> {
+  return authedRequest<ExamsResponse>('/exams')
 }
