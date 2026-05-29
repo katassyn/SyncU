@@ -44,7 +44,7 @@ function buildScheduleId(sectionId: string, entry: Pick<FlattenedScheduleEntry, 
 	return `${sectionId}|${entry.normalizedDate}|${entry.normalizedTime}|${entry.subjectNormalized}`;
 }
 
-function serializePreviousEntry(entry: FlattenedScheduleEntry): string {
+export function serializeFlattenedEntry(entry: FlattenedScheduleEntry): string {
 	return JSON.stringify({
 		scheduleId: entry.scheduleId,
 		sectionId: entry.sectionId,
@@ -137,7 +137,7 @@ export function detectScheduleChanges(
 			changes.push({
 				scheduleId: nextEntry.scheduleId,
 				changeType: "modified",
-				prevDataJson: serializePreviousEntry(previousEntry),
+				prevDataJson: serializeFlattenedEntry(previousEntry),
 			});
 			unmatchedPrevious.splice(previousIndex, 1);
 			unmatchedNext.splice(i, 1);
@@ -160,7 +160,7 @@ export function detectScheduleChanges(
 			changes.push({
 				scheduleId: nextEntry.scheduleId,
 				changeType: "modified",
-				prevDataJson: serializePreviousEntry(previousEntry),
+				prevDataJson: serializeFlattenedEntry(previousEntry),
 			});
 			unmatchedPrevious.splice(previousIndex, 1);
 			unmatchedNext.splice(i, 1);
@@ -179,7 +179,7 @@ export function detectScheduleChanges(
 		changes.push({
 			scheduleId: entry.scheduleId,
 			changeType: "removed",
-			prevDataJson: serializePreviousEntry(entry),
+			prevDataJson: serializeFlattenedEntry(entry),
 		});
 	}
 

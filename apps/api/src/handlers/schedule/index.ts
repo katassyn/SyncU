@@ -8,12 +8,23 @@ import {
   getSourceUrl,
   getAllSections,
   getAllLecturers,
+  getRecentScheduleChanges,
   getSectionsByGroupPrefix,
   getEntriesByLecturerAbbr,
   getLecturerByNormalizedAbbr,
   getFullScheduleData,
   getRecentScheduleChanges,
 } from "../../db";
+import { flattenScheduleData } from "../../db/schedule-changes";
+
+type RecentChangeEntry = {
+  id: number;
+  scheduleId: string;
+  changeType: "added" | "removed" | "modified";
+  changedAt: string;
+  prevData: Record<string, unknown> | null;
+  currentData: Record<string, unknown> | null;
+};
 
 async function ensureFreshData(): Promise<void> {
   const { url, filename } = await scrapeXlsUrl();
@@ -25,6 +36,56 @@ async function ensureFreshData(): Promise<void> {
   const scheduleData = parseSchedule(xlsBuffer, url);
 
   saveSchedule(scheduleData, filename, normalize);
+}
+
+export function buildGroupScheduleResponse(groupId: string) {
+  const sections = getSectionsByGroupPrefix(groupId);
+
+  if (sections.length === 0) {
+    throw new Error(`Group "${groupId}" not found`);
+  }
+
+  const sourceUrl = getSourceUrl();
+  const lecturers = getAllLecturers();
+  const flattenedEntries = flattenScheduleData(
+    {
+      sourceUrl,
+      sections,
+      lecturers,
+    },
+    normalize,
+  );
+  const currentEntriesByScheduleId = new Map(
+    flattenedEntries.map((entry) => [
+      entry.scheduleId,
+      {
+        scheduleId: entry.scheduleId,
+        sectionId: entry.sectionId,
+        label: entry.label,
+        yearSemLabel: entry.yearSemLabel,
+        groupId: entry.groupId,
+        date: entry.date,
+        time: entry.time,
+        subject: entry.subject,
+      },
+    ]),
+  );
+
+  const recentChanges: RecentChangeEntry[] = getRecentScheduleChanges(groupId).map((change) => ({
+    id: change.id,
+    scheduleId: change.scheduleId,
+    changeType: change.changeType,
+    changedAt: change.changedAt,
+    prevData: change.prevDataJson ? JSON.parse(change.prevDataJson) : null,
+    currentData: currentEntriesByScheduleId.get(change.scheduleId) ?? null,
+  }));
+
+  return {
+    sourceUrl,
+    sections,
+    lecturers,
+    recentChanges,
+  };
 }
 
 export const scheduleRoutes = new Elysia({ prefix: "/schedule" })
@@ -50,17 +111,7 @@ export const scheduleRoutes = new Elysia({ prefix: "/schedule" })
     "/group/:groupId",
     async ({ params: { groupId } }) => {
       await ensureFreshData();
-      const sections = getSectionsByGroupPrefix(groupId);
-
-      if (sections.length === 0) {
-        throw new Error(`Group "${groupId}" not found`);
-      }
-
-      return {
-        sourceUrl: getSourceUrl(),
-        sections,
-        lecturers: getAllLecturers(),
-      };
+      return buildGroupScheduleResponse(groupId);
     },
     { params: t.Object({ groupId: t.String() }) }
   )
