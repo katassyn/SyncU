@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import type { WeekEvent, WeekParity } from '@syncu/types';
-import { ScheduleCard } from './ScheduleCard';
+import { ScheduleCard, type ChangeStatus } from './ScheduleCard';
+
+export type EventChangeInfo = { status: ChangeStatus; detail?: string };
 
 interface WeekGridProps {
   events: WeekEvent[];
   weekDates: Date[];
   weekParity?: WeekParity;
+  /** G-9: mapa id eventu -> info o zmianie (badge + tooltip). */
+  changeInfo?: Map<WeekEvent['id'], EventChangeInfo>;
 }
 
 const HOUR_START = 8;
@@ -27,7 +31,7 @@ const DAY_LABELS = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
 
 const hours = Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i);
 
-export function WeekGrid({ events, weekDates, weekParity }: WeekGridProps) {
+export function WeekGrid({ events, weekDates, weekParity, changeInfo }: WeekGridProps) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000);
@@ -153,6 +157,7 @@ export function WeekGrid({ events, weekDates, weekParity }: WeekGridProps) {
         {events.map((event) => {
           const rowStart = timeToRow(event.startTime);
           const rowSpan = Math.max(1, timeDurationInSlots(event.startTime, event.endTime));
+          const change = changeInfo?.get(event.id);
           return (
             <ScheduleCard
               key={event.id}
@@ -160,6 +165,8 @@ export function WeekGrid({ events, weekDates, weekParity }: WeekGridProps) {
               column={event.day}
               rowStart={rowStart}
               rowSpan={rowSpan}
+              changeStatus={change?.status}
+              changeDetail={change?.detail}
             />
           );
         })}

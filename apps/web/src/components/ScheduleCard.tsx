@@ -8,6 +8,8 @@ interface ScheduleCardProps {
   rowStart: number;
   rowSpan: number;
   changeStatus?: ChangeStatus;
+  /** Tekst tooltipa pokazywany po hover (np. "Zmienione - poprzednio: ..."). */
+  changeDetail?: string;
 }
 
 // Krotkie labelki - dziala w waskich kolumnach kalendarza bez ucinania.
@@ -47,12 +49,13 @@ const TYPE_CONFIG: Record<ClassSessionType, { card: string; badge: string; label
   },
 };
 
-export function ScheduleCard({ event, column, rowStart, rowSpan, changeStatus }: ScheduleCardProps) {
+export function ScheduleCard({ event, column, rowStart, rowSpan, changeStatus, changeDetail }: ScheduleCardProps) {
   const cfg = TYPE_CONFIG[event.type];
   const chg = changeStatus ? CHANGE_CONFIG[changeStatus] : null;
 
   return (
     <div
+      title={changeDetail}
       className={[
         'relative rounded-card-sm px-2 py-1.5 overflow-hidden min-w-0 z-10',
         'border-l-[3px] flex flex-col gap-px',

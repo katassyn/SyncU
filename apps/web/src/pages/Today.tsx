@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import type { ScheduleEntry } from '@syncu/types';
-import { fetchGroupSchedule } from '../lib/api';
-import { addDays, formatDDMM } from '../lib/week';
+import { fetchExams, fetchGroupSchedule, type ExamRecord } from '../lib/api';
+import { getStoredToken } from '../lib/auth';
+import { addDays, daysUntil, formatDDMM, formatRelativeDay } from '../lib/week';
 
 // --------------- typy ---------------
 
@@ -44,11 +45,13 @@ const placeholderSessions = [
   },
 ];
 
-const deadlines = [
-  { id: 1, title: 'Midterm: Rachunek III',      when: 'za 2 dni', urgent: true  },
-  { id: 2, title: 'Kolokwium: Sieci Neuronowe', when: '29 paź',   urgent: false },
-  { id: 3, title: 'Szkic pracy dyplomowej',     when: '4 lis',    urgent: false },
-];
+// G-12: kolokwia (deadlines) wpiete pod GET /exams - countdown liczony przez
+// formatRelativeDay. Stany: anon (niezalogowany) / loading / loaded / error.
+type ExamsState =
+  | { kind: 'anon' }
+  | { kind: 'loading' }
+  | { kind: 'loaded'; upcoming: ExamRecord[] }
+  | { kind: 'error' }
 
 const studyProgress = [
   { subject: 'Fizyka',     percent: 75 },
@@ -202,12 +205,107 @@ function UpcomingList({ state, entries }: { state: ScheduleState; entries: Sched
   );
 }
 
+// --------------- sekcja "Terminy" (kolokwia) ---------------
+
+function DeadlinesList({ state }: { state: ExamsState }) {
+  if (state.kind === 'anon') {
+    return (
+      <div className="flex flex-col items-center justify-center flex-1 py-6 gap-2 text-center">
+        <p className="text-ui text-muted m-0">Zaloguj sie, aby widziec kolokwia.</p>
+        <NavLink to="/login" className="text-badge font-bold text-primary-nav hover:underline">
+          Zaloguj sie →
+        </NavLink>
+      </div>
+    );
+  }
+
+  if (state.kind === 'loading') {
+    return (
+      <div className="flex flex-col gap-3 flex-1">
+        {[0, 1, 2].map(i => (
+          <div key={i} className="h-10 rounded-card-sm bg-surface-1 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (state.kind === 'error') {
+    return (
+      <div className="flex items-center justify-center flex-1 py-6">
+        <p className="text-ui text-muted m-0">Nie udalo sie pobrac kolokwiow.</p>
+      </div>
+    );
+  }
+
+  if (state.upcoming.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center flex-1 py-6 gap-2 text-center">
+        <p className="text-ui text-muted m-0">Brak nadchodzacych kolokwiow.</p>
+        <NavLink to="/exams" className="text-badge font-bold text-primary-nav hover:underline">
+          Dodaj kolokwium →
+        </NavLink>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col flex-1">
+      {state.upcoming.map((exam, i) => {
+        const date = new Date(exam.date);
+        const urgent = daysUntil(date) <= 2;
+        return (
+          <div key={exam.id} className="flex items-start gap-3">
+            <div className="flex flex-col items-center shrink-0 pt-1">
+              <div className={['size-2 rounded-full shrink-0', urgent ? 'bg-danger' : 'bg-primary'].join(' ')} />
+              {i < state.upcoming.length - 1 && (
+                <div className="w-px bg-border-subtle mt-1" style={{ height: '2.5rem' }} />
+              )}
+            </div>
+            <div className="flex-1 min-w-0 pb-4 last:pb-0 cursor-pointer group">
+              <p className="text-body font-semibold text-heading m-0 leading-tight truncate group-hover:text-primary-nav transition-colors duration-150">
+                {exam.courseName}
+              </p>
+              <span className={['text-badge font-bold mt-0.5 inline-block capitalize', urgent ? 'text-danger' : 'text-muted'].join(' ')}>
+                {formatRelativeDay(date)}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // --------------- main ---------------
 
 export default function Today() {
   const [scheduleState, setScheduleState] = useState<ScheduleState>(() =>
     localStorage.getItem('syncu.selectedGroup') ? { kind: 'loading' } : { kind: 'idle' }
   );
+
+  // G-12: kolokwia z GET /exams (tylko dla zalogowanych)
+  const [examsState, setExamsState] = useState<ExamsState>(() =>
+    getStoredToken() ? { kind: 'loading' } : { kind: 'anon' }
+  );
+
+  useEffect(() => {
+    if (!getStoredToken()) return;
+    let cancelled = false;
+    fetchExams()
+      .then((res) => {
+        if (cancelled) return;
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const upcoming = res.exams
+          .filter((e) => new Date(e.date).getTime() >= now.getTime())
+          .slice(0, 5);
+        setExamsState({ kind: 'loaded', upcoming });
+      })
+      .catch(() => {
+        if (!cancelled) setExamsState({ kind: 'error' });
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const groupId = localStorage.getItem('syncu.selectedGroup');
@@ -282,24 +380,7 @@ export default function Today() {
         {/* Terminy — 4 kolumny */}
         <div className="lg:col-span-4 bg-white rounded-card-lg shadow-card-sm p-6 flex flex-col gap-5">
           <p className="text-h3 font-bold text-heading m-0">Terminy</p>
-          <div className="flex flex-col flex-1">
-            {deadlines.map((d, i) => (
-              <div key={d.id} className="flex items-start gap-3">
-                <div className="flex flex-col items-center shrink-0 pt-1">
-                  <div className={['size-2 rounded-full shrink-0', d.urgent ? 'bg-danger' : 'bg-primary'].join(' ')} />
-                  {i < deadlines.length - 1 && (
-                    <div className="w-px bg-border-subtle mt-1" style={{ height: '2.5rem' }} />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0 pb-4 last:pb-0 cursor-pointer group">
-                  <p className="text-body font-semibold text-heading m-0 leading-tight truncate group-hover:text-primary-nav transition-colors duration-150">{d.title}</p>
-                  <span className={['text-badge font-bold mt-0.5 inline-block', d.urgent ? 'text-danger' : 'text-muted'].join(' ')}>
-                    {d.when}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <DeadlinesList state={examsState} />
           <NavLink
             to="/week"
             className="flex items-center justify-center text-badge font-bold uppercase tracking-badge text-primary-nav bg-primary-light hover:bg-primary hover:text-on-primary rounded-pill py-2.5 transition-colors"

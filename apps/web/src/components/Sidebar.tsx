@@ -1,10 +1,10 @@
 import { NavLink } from 'react-router-dom';
 
+// G-11: Focus Mode i Biblioteka usuniete z nawigacji (decyzja zespolu 14.05).
+// /library nadal istnieje jako route ("Grupy" w Topbar), tylko nie ma go w sidebar.
 const navItems = [
   { label: 'Kalendarz',   href: '/week',     icon: <WeekIcon /> },
   { label: 'Przedmioty',  href: '/subjects', icon: <SubjectsIcon /> },
-  { label: 'Focus Mode',  href: '/focus',    icon: <FocusIcon /> },
-  { label: 'Biblioteka',  href: '/library',  icon: <LibraryIcon /> },
 ];
 
 export function Sidebar() {
@@ -70,24 +70,6 @@ function SubjectsIcon() {
       <path d="M3 4h9a2 2 0 012 2v8a2 2 0 01-2 2H3V4z" />
       <path d="M12 4a2 2 0 012 2v8" />
       <path d="M6 8h5M6 11h3" />
-    </svg>
-  );
-}
-
-function FocusIcon() {
-  return (
-    <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="size-full">
-      <circle cx="9" cy="10" r="6" />
-      <path d="M9 7v3l2 1" />
-      <path d="M7 2h4" />
-    </svg>
-  );
-}
-
-function LibraryIcon() {
-  return (
-    <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="size-full">
-      <path d="M2 14V4l4-1v10L2 14zM6 13l4 1V4L6 3v10zM10 14l4-1V3l-4 1v10z" />
     </svg>
   );
 }

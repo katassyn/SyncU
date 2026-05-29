@@ -47,6 +47,72 @@ export function formatWeekLabel(weekStart: Date): string {
   return `${weekStart.getDate()} ${months[weekStart.getMonth()]} - ${end.getDate()} ${months[end.getMonth()]} ${end.getFullYear()}`
 }
 
+/* --- miesiac (G-10) --- */
+
+/** Pierwszy dzien miesiaca dla podanej daty (1. dnia, 00:00). */
+export function startOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1)
+}
+
+/** Przesuwa o n miesiecy (zwraca 1. dzien docelowego miesiaca). */
+export function addMonths(d: Date, n: number): Date {
+  return new Date(d.getFullYear(), d.getMonth() + n, 1)
+}
+
+/**
+ * Zwraca daty do wyswietlenia w gridzie miesiaca - caly miesiac + dopelnienie
+ * dniami sasiednich miesiecy, zeby grid zaczynal sie od poniedzialku i konczyl
+ * na niedzieli. Zwraca 35 lub 42 daty (5 lub 6 tygodni, zaleznie od ukladu).
+ */
+export function monthGridDates(d: Date): Date[] {
+  const first = startOfMonth(d)
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0) // ostatni dzien miesiaca
+  const gridStart = startOfWeek(first)
+  const gridEndWeekStart = startOfWeek(last)
+  const totalDays =
+    Math.round((gridEndWeekStart.getTime() - gridStart.getTime()) / 86_400_000) + 7
+  return Array.from({ length: totalDays }, (_, i) => addDays(gridStart, i))
+}
+
+/**
+ * G-12: relatywny opis daty - "dzis" / "jutro" / "za 3 dni" / "za 2 tyg." /
+ * "wczoraj" / "5 dni temu". Uzywany w countdownie kolokwiow na Today.
+ */
+export function formatRelativeDay(target: Date, now: Date = new Date()): string {
+  const t0 = new Date(target.getFullYear(), target.getMonth(), target.getDate())
+  const n0 = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const diff = Math.round((t0.getTime() - n0.getTime()) / 86_400_000)
+
+  if (diff < 0) {
+    const ago = Math.abs(diff)
+    if (ago === 1) return 'wczoraj'
+    if (ago < 7) return `${ago} dni temu`
+    return `${Math.round(ago / 7)} tyg. temu`
+  }
+  if (diff === 0) return 'dzis'
+  if (diff === 1) return 'jutro'
+  if (diff < 7) return `za ${diff} dni`
+  if (diff < 14) return 'za tydzien'
+  if (diff < 31) return `za ${Math.round(diff / 7)} tyg.`
+  return `za ${Math.round(diff / 30)} mies.`
+}
+
+/** Liczba dni do podanej daty (ujemne = w przeszlosci). */
+export function daysUntil(target: Date, now: Date = new Date()): number {
+  const t0 = new Date(target.getFullYear(), target.getMonth(), target.getDate())
+  const n0 = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  return Math.round((t0.getTime() - n0.getTime()) / 86_400_000)
+}
+
+/** Pretty label miesiaca, np. "Maj 2026". */
+export function formatMonthLabel(d: Date): string {
+  const months = [
+    'Styczen', 'Luty', 'Marzec', 'Kwiecien', 'Maj', 'Czerwiec',
+    'Lipiec', 'Sierpien', 'Wrzesien', 'Pazdziernik', 'Listopad', 'Grudzien',
+  ]
+  return `${months[d.getMonth()]} ${d.getFullYear()}`
+}
+
 /** Zwraca numer tygodnia ISO (1–53) dla podanej daty. */
 export function isoWeekNumber(d: Date): number {
   const date = new Date(d.getFullYear(), d.getMonth(), d.getDate())
