@@ -6,6 +6,7 @@ import { examsRoutes } from "./handlers/exams";
 import { meRoutes } from "./handlers/me";
 import { scheduleRoutes } from "./handlers/schedule";
 import { timetableRoutes } from "./handlers/timetable";
+import { cleanupOldScheduleChanges } from "./db";
 
 const app = new Elysia()
 	.use(cors({ origin: "*" }))
@@ -35,3 +36,6 @@ const app = new Elysia()
 	.listen({ port: Number(process.env.PORT ?? 3001), hostname: "0.0.0.0" });
 
 console.log(`SyncU API running on http://0.0.0.0:${app.server?.port}`);
+
+cleanupOldScheduleChanges();
+setInterval(() => cleanupOldScheduleChanges(), 24 * 60 * 60 * 1000);

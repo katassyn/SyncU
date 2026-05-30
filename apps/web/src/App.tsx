@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 
 import { AppLayout } from './components/AppLayout'
+import { ProtectedRoute } from './components/ProtectedRoute'
 import Today from './pages/Today'
 import Profile from './pages/Profile'
 import Week from './pages/Week'
@@ -18,14 +19,14 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/week" replace />} />
 
-        <Route path="/today" element={<Today />} />
-        <Route path="/week" element={<Week />} />
+        <Route path="/today" element={<ProtectedRoute><Today /></ProtectedRoute>} />
+        <Route path="/week" element={<ProtectedRoute><Week /></ProtectedRoute>} />
         <Route path="/subject/:id" element={<Subject />} />
         <Route path="/library" element={<Library />} />
         <Route path="/import" element={<Import />} />
 
         {/* Auth + onboarding (G-6.9, G-6.10, G-7.4) */}
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
