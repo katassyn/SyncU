@@ -187,6 +187,15 @@ export function getLecturerByNormalizedAbbr(
   );
 }
 
+export function cleanupOldScheduleChanges(olderThanDays = 30): number {
+  const threshold = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000).toISOString();
+  const result = getDb().run(
+    "DELETE FROM schedule_changes WHERE changed_at < ?",
+    [threshold]
+  );
+  return result.changes;
+}
+
 export function getFullScheduleData(): ScheduleData {
   const d = getDb();
   const sourceUrl = getSourceUrl();

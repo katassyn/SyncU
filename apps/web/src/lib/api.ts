@@ -11,7 +11,7 @@
  */
 
 import type { ScheduleData, WeekSchedule } from '@syncu/types'
-import { getStoredToken } from './auth'
+import { getStoredToken, clearToken } from './auth'
 
 const API_BASE: string =
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001'
@@ -30,6 +30,11 @@ export type GroupsResponse = {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, init)
+  if (res.status === 401) {
+    clearToken()
+    window.location.href = '/login'
+    throw new Error('Unauthorized')
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new Error(`HTTP ${res.status} ${res.statusText}${text ? ': ' + text : ''}`)

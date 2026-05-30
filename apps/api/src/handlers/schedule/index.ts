@@ -13,7 +13,6 @@ import {
   getEntriesByLecturerAbbr,
   getLecturerByNormalizedAbbr,
   getFullScheduleData,
-  getRecentScheduleChanges,
 } from "../../db";
 import { flattenScheduleData } from "../../db/schedule-changes";
 

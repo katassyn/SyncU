@@ -99,10 +99,20 @@ export interface SectionSchedule {
   entries: ScheduleEntry[];
 }
 
+export interface ChangeEntry {
+  id: number;
+  scheduleId: string;
+  changeType: "added" | "removed" | "modified";
+  changedAt: string;
+  prevData: Record<string, unknown> | null;
+  currentData: Record<string, unknown> | null;
+}
+
 export interface ScheduleData {
   sourceUrl: string;
   sections: SectionSchedule[];
   lecturers: LecturerInfo[];
+  recentChanges?: ChangeEntry[];
 }
 
 export interface WeekEvent {
