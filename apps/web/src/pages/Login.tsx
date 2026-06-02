@@ -34,9 +34,9 @@ export default function Login() {
   return (
     <div className="min-h-[calc(100vh-57px)] flex items-center justify-center px-4">
       <Card variant="white" padding="lg" className="w-full max-w-md">
-        <h1 className="text-h2 font-bold text-heading mb-1">Zaloguj sie</h1>
+        <h1 className="text-h2 font-bold text-heading mb-1">Zaloguj się</h1>
         <p className="text-ui text-muted mb-6">
-          Dostep do planu zajec, kolokwiow i statystyk nauki.
+          Dostęp do planu zajęć, kolokwiów i statystyk nauki.
         </p>
 
         <Form onSubmit={handleSubmit}>
@@ -75,7 +75,7 @@ export default function Login() {
             fullWidth
             disabled={loading}
           >
-            {loading ? 'Logowanie...' : 'Zaloguj sie'}
+            {loading ? 'Logowanie...' : 'Zaloguj się'}
           </Button>
         </Form>
 

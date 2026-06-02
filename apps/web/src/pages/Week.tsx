@@ -241,7 +241,7 @@ export default function Week() {
       {/* Error (no groups) */}
       {state.kind === 'error' && !state.groups && (
         <Card variant="surface" padding="md" className="border border-danger/40 bg-danger/5 mb-4">
-          <p className="text-danger font-semibold mb-1">Blad</p>
+          <p className="text-danger font-semibold mb-1">Błąd</p>
           <p className="text-muted text-ui">{state.message}</p>
         </Card>
       )}
@@ -321,14 +321,14 @@ export default function Week() {
 
           {state.kind === 'error' && state.groups && (
             <Card variant="surface" padding="md" className="border border-danger/40 bg-danger/5 mb-4">
-              <p className="text-danger font-semibold mb-1">Blad</p>
+              <p className="text-danger font-semibold mb-1">Błąd</p>
               <p className="text-muted text-ui mb-3">{state.message}</p>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => loadSchedule(state.selected!, state.groups!, setState)}
               >
-                Sprobuj ponownie
+                Spróbuj ponownie
               </Button>
             </Card>
           )}

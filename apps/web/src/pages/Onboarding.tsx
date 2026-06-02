@@ -36,7 +36,7 @@ export default function Onboarding() {
         if (res.groups.length === 0) {
           setState({
             kind: 'error',
-            message: 'Backend nie zwrocil zadnych grup. Sprobuj pozniej.',
+            message: 'Backend nie zwrócił żadnych grup. Spróbuj później.',
           })
           return
         }
@@ -90,7 +90,7 @@ export default function Onboarding() {
     <div className="min-h-[calc(100vh-57px)] flex items-center justify-center px-4 py-8">
       <Card variant="white" padding="lg" className="w-full max-w-md">
         <h1 className="text-h2 font-bold text-heading mb-1">
-          Wybierz swoja grupe
+          Wybierz swoją grupę
         </h1>
         <p className="text-ui text-muted mb-6">
           Plan zajec, kolokwia i statystyki beda dostosowane do Twojej grupy.
@@ -104,7 +104,7 @@ export default function Onboarding() {
 
         {state.kind === 'error' && (
           <div className="border border-danger/40 bg-danger/5 rounded-card p-4 mb-4">
-            <p className="text-ui text-danger font-semibold mb-1">Blad</p>
+            <p className="text-ui text-danger font-semibold mb-1">Błąd</p>
             <p className="text-ui text-muted">{state.message}</p>
           </div>
         )}

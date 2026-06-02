@@ -212,9 +212,9 @@ function DeadlinesList({ state }: { state: ExamsState }) {
   if (state.kind === 'anon') {
     return (
       <div className="flex flex-col items-center justify-center flex-1 py-6 gap-2 text-center">
-        <p className="text-ui text-muted m-0">Zaloguj sie, aby widziec kolokwia.</p>
+        <p className="text-ui text-muted m-0">Zaloguj się, aby widzieć kolokwia.</p>
         <NavLink to="/login" className="text-badge font-bold text-primary-nav hover:underline">
-          Zaloguj sie →
+          Zaloguj się →
         </NavLink>
       </div>
     );
@@ -233,7 +233,7 @@ function DeadlinesList({ state }: { state: ExamsState }) {
   if (state.kind === 'error') {
     return (
       <div className="flex items-center justify-center flex-1 py-6">
-        <p className="text-ui text-muted m-0">Nie udalo sie pobrac kolokwiow.</p>
+        <p className="text-ui text-muted m-0">Nie udało się pobrać kolokwiów.</p>
       </div>
     );
   }
@@ -241,7 +241,7 @@ function DeadlinesList({ state }: { state: ExamsState }) {
   if (state.upcoming.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 py-6 gap-2 text-center">
-        <p className="text-ui text-muted m-0">Brak nadchodzacych kolokwiow.</p>
+        <p className="text-ui text-muted m-0">Brak nadchodzących kolokwiów.</p>
         <NavLink to="/exams" className="text-badge font-bold text-primary-nav hover:underline">
           Dodaj kolokwium →
         </NavLink>
