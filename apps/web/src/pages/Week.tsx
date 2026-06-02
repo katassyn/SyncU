@@ -71,10 +71,7 @@ export default function Week() {
   // G-9: fetch zmian dla wybranej grupy + toast jezeli sa swieze od ostatniej wizyty
   const loadedSelected = state.kind === 'loaded' ? state.selected : null
   useEffect(() => {
-    if (!loadedSelected) {
-      setChanges([])
-      return
-    }
+    if (!loadedSelected) return
     let cancelled = false
     fetchScheduleChanges(loadedSelected)
       .then((res) => {
@@ -289,7 +286,7 @@ export default function Week() {
                 >
                   <div className="flex-1 min-w-0">
                     <span className="text-badge text-muted block mb-1">{e.time}</span>
-                    <p className="text-body font-semibold text-heading m-0 truncate">{e.subject}</p>
+                    <p className="text-ui font-semibold text-heading m-0 truncate">{e.subject}</p>
                   </div>
                 </div>
               ))}
@@ -315,7 +312,11 @@ export default function Week() {
       {view === 'week' && (
         <>
           {state.kind === 'loadingGroups' && (
-            <p className="text-muted">Ladowanie listy grup...</p>
+            <div className="flex flex-col gap-3">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="h-14 rounded-card-sm bg-surface-1 animate-pulse" />
+              ))}
+            </div>
           )}
 
           {state.kind === 'error' && state.groups && (
@@ -335,7 +336,11 @@ export default function Week() {
           <WeekDatePicker weekStart={weekStart} onChange={setWeekStart} />
 
           {state.kind === 'loadingSchedule' && (
-            <p className="text-muted">Ladowanie planu grupy...</p>
+            <div className="flex flex-col gap-3">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="h-14 rounded-card-sm bg-surface-1 animate-pulse" />
+              ))}
+            </div>
           )}
 
           {isEmpty && (
@@ -367,15 +372,22 @@ export default function Week() {
           )}
 
           {state.kind === 'loaded' && (
-            <MonthGrid
-              monthDate={monthDate}
-              gridDates={monthCells}
-              entriesByDay={entriesByDay}
-              onSelectDay={(date) => {
-                setSelectedDate(dayStart(date))
-                setView('day')
-              }}
-            />
+            <>
+              <MonthGrid
+                monthDate={monthDate}
+                gridDates={monthCells}
+                entriesByDay={entriesByDay}
+                onSelectDay={(date) => {
+                  setSelectedDate(dayStart(date))
+                  setView('day')
+                }}
+              />
+              {!monthCells.some((d) => entriesByDay.has(formatDDMM(d))) && (
+                <p className="text-center text-muted text-ui mt-4">
+                  Brak zajęć w tym miesiącu.
+                </p>
+              )}
+            </>
           )}
         </>
       )}
@@ -659,18 +671,18 @@ function EmptyWeekState({
   return (
     <Card variant="surface" padding="lg" className="text-center">
       <h2 className="text-heading text-h2 font-semibold mb-2">
-        W tym tygodniu nie ma zajec
+        W tym tygodniu nie ma zajęć
       </h2>
       <p className="text-muted mb-6 max-w-md mx-auto">
-        Plan studiow zaocznych nie obejmuje kazdego weekendu. Sprawdz sasiednie
-        tygodnie - tam pewnie cos jest.
+        Plan studiów zaocznych nie obejmuje każdego weekendu. Sprawdź sąsiednie
+        tygodnie — tam pewnie coś jest.
       </p>
       <div className="flex gap-2 justify-center mb-8 flex-wrap">
         <Button variant="secondary" size="md" onClick={onPrev}>
-          ← Poprzedni tydzien
+          ← Poprzedni tydzień
         </Button>
         <Button variant="secondary" size="md" onClick={onNext}>
-          Nastepny tydzien →
+          Następny tydzień →
         </Button>
       </div>
       <button
@@ -678,7 +690,7 @@ function EmptyWeekState({
         onClick={onImport}
         className="text-sm text-muted underline hover:text-primary"
       >
-        Chcesz wgrac wlasny plik .xlsx? Idz do /import
+        Chcesz wgrać własny plik .xlsx? Idź do /import
       </button>
     </Card>
   )
