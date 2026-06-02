@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import type { ScheduleEntry } from '@syncu/types';
+import { ExamCard } from '@syncu/ui';
 import { fetchExams, fetchGroupSchedule, type ExamRecord } from '../lib/api';
 import { getStoredToken } from '../lib/auth';
-import { addDays, daysUntil, formatDDMM, formatRelativeDay } from '../lib/week';
+import { addDays, formatDDMM } from '../lib/week';
 
 // --------------- typy ---------------
 
@@ -45,8 +46,8 @@ const placeholderSessions = [
   },
 ];
 
-// G-12: kolokwia (deadlines) wpiete pod GET /exams - countdown liczony przez
-// formatRelativeDay. Stany: anon (niezalogowany) / loading / loaded / error.
+// G-12: kolokwia (deadlines) wpiete pod GET /exams - countdown w ExamCard.
+// Stany: anon (niezalogowany) / loading / loaded / error.
 type ExamsState =
   | { kind: 'anon' }
   | { kind: 'loading' }
@@ -249,29 +250,15 @@ function DeadlinesList({ state }: { state: ExamsState }) {
   }
 
   return (
-    <div className="flex flex-col flex-1">
-      {state.upcoming.map((exam, i) => {
-        const date = new Date(exam.date);
-        const urgent = daysUntil(date) <= 2;
-        return (
-          <div key={exam.id} className="flex items-start gap-3">
-            <div className="flex flex-col items-center shrink-0 pt-1">
-              <div className={['size-2 rounded-full shrink-0', urgent ? 'bg-danger' : 'bg-primary'].join(' ')} />
-              {i < state.upcoming.length - 1 && (
-                <div className="w-px bg-border-subtle mt-1" style={{ height: '2.5rem' }} />
-              )}
-            </div>
-            <div className="flex-1 min-w-0 pb-4 last:pb-0 cursor-pointer group">
-              <p className="text-body font-semibold text-heading m-0 leading-tight truncate group-hover:text-primary-nav transition-colors duration-150">
-                {exam.courseName}
-              </p>
-              <span className={['text-badge font-bold mt-0.5 inline-block capitalize', urgent ? 'text-danger' : 'text-muted'].join(' ')}>
-                {formatRelativeDay(date)}
-              </span>
-            </div>
-          </div>
-        );
-      })}
+    <div className="flex flex-col gap-3 flex-1">
+      {state.upcoming.map((exam) => (
+        <ExamCard
+          key={exam.id}
+          courseName={exam.courseName}
+          date={exam.date}
+          scope={exam.scope}
+        />
+      ))}
     </div>
   );
 }
