@@ -18,20 +18,8 @@ export function TopBar({ onProfileClick }: TopBarProps) {
     <header className="fixed top-0 inset-x-0 z-40 backdrop-blur-sm bg-white/80 shadow-card-sm">
       <div className="flex items-center justify-between gap-4 px-4 sm:px-6 lg:px-11 py-3 sm:py-4">
 
-        {/* Left — search (ukryte na mobile) */}
-        <div className="hidden md:flex flex-1 max-w-sm lg:max-w-[448px] relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">
-            <SearchIcon />
-          </span>
-          <input
-            type="search"
-            placeholder="Szukaj zasobów, notatek..."
-            className="w-full bg-surface-1 rounded-pill pl-9 pr-4 py-2 text-ui text-heading placeholder:text-muted focus:outline-none focus:bg-white focus:border focus:border-primary transition-colors"
-          />
-        </div>
-
-        {/* Center — navigation */}
-        <nav className="flex items-center gap-4 sm:gap-6 lg:gap-8 mx-auto md:mx-0">
+        {/* Left — navigation */}
+        <nav className="flex items-center gap-4 sm:gap-6 lg:gap-8">
           <NavLink to="/today"   className={navLinkClass}>Dashboard</NavLink>
           <NavLink to="/week"    className={navLinkClass}>Kalendarz</NavLink>
           <NavLink to="/library" className={navLinkClass}>Grupy</NavLink>
@@ -64,15 +52,6 @@ export function TopBar({ onProfileClick }: TopBarProps) {
 
       </div>
     </header>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M10 10l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
   );
 }
 
