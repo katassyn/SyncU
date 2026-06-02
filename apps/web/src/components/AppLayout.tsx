@@ -11,15 +11,16 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { pathname } = useLocation();
-  const showSidebar = pathname.startsWith('/week');
+  const isAuthPage = ['/login', '/register', '/onboarding'].includes(pathname);
+  const showSidebar = !isAuthPage && pathname.startsWith('/week');
 
   return (
     <div className="min-h-screen bg-bg-base">
-      <TopBar onProfileClick={() => setDrawerOpen(true)} />
+      {!isAuthPage && <TopBar onProfileClick={() => setDrawerOpen(true)} />}
 
       {showSidebar && <Sidebar />}
 
-      <main className={['pt-[57px]', showSidebar ? 'pl-60' : ''].join(' ')}>
+      <main className={[!isAuthPage && 'pt-[57px]', showSidebar ? 'pl-60' : ''].filter(Boolean).join(' ')}>
         {children}
       </main>
 
