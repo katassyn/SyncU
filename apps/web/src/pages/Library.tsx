@@ -171,33 +171,6 @@ export default function Library() {
         {resources.map(r => <ResourceCard key={r.id} res={r} />)}
       </div>
 
-      {/* Research Hub banner */}
-      <div className="bg-primary rounded-card-lg p-8 mb-5 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div className="flex flex-col gap-2">
-          <p className="text-h2 font-bold text-on-primary m-0">
-            Międzyuczelniany Hub Badawczy
-          </p>
-          <p className="text-ui text-on-primary/70 m-0">
-            Dołącz do ponad 200 badaczy z różnych uczelni. Dziel się wynikami, współpracuj nad projektami i buduj sieć kontaktów akademickich.
-          </p>
-          <div className="flex items-center gap-2 mt-1">
-            {/* Avatary */}
-            {['A', 'B', 'C', 'D'].map((l, i) => (
-              <div
-                key={i}
-                className="size-8 rounded-pill bg-on-primary/20 text-on-primary text-badge font-bold flex items-center justify-center -ml-2 first:ml-0 border-2 border-primary"
-              >
-                {l}
-              </div>
-            ))}
-            <span className="text-badge text-on-primary/70 ml-2">+200 badaczy</span>
-          </div>
-        </div>
-        <button className="shrink-0 bg-white text-primary-nav font-bold text-ui rounded-pill px-6 py-3 hover:bg-primary-light transition-colors cursor-pointer">
-          Dołącz do Hubu
-        </button>
-      </div>
-
     </div>
   );
 }
