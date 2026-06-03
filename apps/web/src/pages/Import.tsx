@@ -107,7 +107,10 @@ export default function ImportPage() {
       )}
 
       {phase.kind === 'parsing' && (
-        <p className="text-muted">Parsowanie pliku...</p>
+        <div className="flex items-center gap-3 text-muted py-4">
+          <Spinner />
+          <span>Parsowanie pliku...</span>
+        </div>
       )}
 
       {phase.kind === 'error' && (
@@ -116,14 +119,14 @@ export default function ImportPage() {
           padding="md"
           className="border border-danger/40 bg-danger/5 mb-4"
         >
-          <p className="text-danger font-semibold mb-1">Blad importu</p>
+          <p className="text-danger font-semibold mb-1">Błąd importu</p>
           <p className="text-muted text-ui mb-4">{phase.message}</p>
           <Button
             variant="secondary"
             size="sm"
             onClick={() => setPhase({ kind: 'idle' })}
           >
-            Sprobuj ponownie
+            Spróbuj ponownie
           </Button>
         </Card>
       )}
@@ -139,7 +142,10 @@ export default function ImportPage() {
       )}
 
       {phase.kind === 'saving' && (
-        <p className="text-muted">Zapisywanie...</p>
+        <div className="flex items-center gap-3 text-muted py-4">
+          <Spinner />
+          <span>Zapisywanie...</span>
+        </div>
       )}
 
       {phase.kind === 'saved' && (
@@ -192,7 +198,7 @@ function DropZone({
       ].join(' ')}
     >
       <p className="text-h3 text-heading mb-1">
-        Upusc plik tutaj albo kliknij, zeby wybrac
+        Upuść plik tutaj albo kliknij, żeby wybrać
       </p>
       <p className="text-muted text-ui">akceptowane: .xls, .xlsx</p>
       {children}
@@ -222,7 +228,7 @@ function ParsedPreview({
       <div className="flex flex-wrap items-end gap-4">
         <label className="flex flex-col gap-1.5 min-w-[280px]">
           <span className="text-caption font-bold text-body tracking-label uppercase">
-            Wybierz swoja grupe
+            Wybierz swoją grupę
           </span>
           <select
             value={selectedId}
@@ -239,7 +245,7 @@ function ParsedPreview({
         <p className="ml-auto text-muted text-caption">
           Sekcji: <strong className="text-heading">{data.sections.length}</strong>
           {' | '}
-          Prowadzacych:{' '}
+          Prowadzących:{' '}
           <strong className="text-heading">{data.lecturers.length}</strong>
         </p>
       </div>
@@ -270,7 +276,7 @@ function ParsedPreview({
                   {section.entries.length === 0 && (
                     <tr>
                       <Td colSpan={3}>
-                        <em className="text-muted">Brak wpisow dla tej grupy</em>
+                        <em className="text-muted">Brak wpisów dla tej grupy</em>
                       </Td>
                     </tr>
                   )}
@@ -295,6 +301,15 @@ function ParsedPreview({
         </>
       )}
     </div>
+  )
+}
+
+function Spinner() {
+  return (
+    <svg className="animate-spin size-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
+      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
   )
 }
 

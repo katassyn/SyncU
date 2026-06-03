@@ -20,21 +20,6 @@ const resources = [
   { id: 4, title: 'Makroekonomia II',              subject: 'Ekonomia',      author: 'Julia W.',  members: 9,  kind: 'ĆWICZENIA',     color: 'bg-primary-light text-primary-nav'          },
 ];
 
-const recentContributions = [
-  { id: 1, title: 'Quantum Tunneling — Notatki',     author: 'Jan K.',    when: '2 godz. temu' },
-  { id: 2, title: 'Etyka AI — Mapa myśli',           author: 'Zespół',    when: '5 godz. temu' },
-  { id: 3, title: 'Algorytmy — Zestaw ćwiczeń',      author: 'Anna M.',   when: 'wczoraj'      },
-  { id: 4, title: 'Makroekonomia — Podsumowanie',    author: 'Julia W.',  when: 'wczoraj'      },
-];
-
-const trendingSubjects = [
-  { id: 1, name: 'Uczenie maszynowe',      count: 42 },
-  { id: 2, name: 'Obliczenia kwantowe',    count: 38 },
-  { id: 3, name: 'Etyka w AI',             count: 31 },
-  { id: 4, name: 'Architektura systemów',  count: 27 },
-  { id: 5, name: 'Bazy danych',            count: 19 },
-];
-
 // --------------- komponenty ---------------
 
 function ResourceCard({ res }: { res: typeof resources[number] }) {
@@ -186,94 +171,6 @@ export default function Library() {
         {resources.map(r => <ResourceCard key={r.id} res={r} />)}
       </div>
 
-      {/* Research Hub banner */}
-      <div className="bg-primary rounded-card-lg p-8 mb-5 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div className="flex flex-col gap-2">
-          <p className="text-h2 font-bold text-on-primary m-0">
-            Międzyuczelniany Hub Badawczy
-          </p>
-          <p className="text-ui text-on-primary/70 m-0">
-            Dołącz do ponad 200 badaczy z różnych uczelni. Dziel się wynikami, współpracuj nad projektami i buduj sieć kontaktów akademickich.
-          </p>
-          <div className="flex items-center gap-2 mt-1">
-            {/* Avatary */}
-            {['A', 'B', 'C', 'D'].map((l, i) => (
-              <div
-                key={i}
-                className="size-8 rounded-pill bg-on-primary/20 text-on-primary text-badge font-bold flex items-center justify-center -ml-2 first:ml-0 border-2 border-primary"
-              >
-                {l}
-              </div>
-            ))}
-            <span className="text-badge text-on-primary/70 ml-2">+200 badaczy</span>
-          </div>
-        </div>
-        <button className="shrink-0 bg-white text-primary-nav font-bold text-ui rounded-pill px-6 py-3 hover:bg-primary-light transition-colors cursor-pointer">
-          Dołącz do Hubu
-        </button>
-      </div>
-
-      {/* Dół: Recent + Trending */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-        {/* Ostatnie wkłady */}
-        <div className="bg-white rounded-card-lg shadow-card-sm p-6 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <p className="text-h3 font-bold text-heading m-0">Ostatnie wkłady</p>
-            <button className="text-badge font-bold text-primary-nav hover:underline cursor-pointer">
-              Zobacz wszystkie
-            </button>
-          </div>
-          <div className="flex flex-col gap-1">
-            {recentContributions.map(c => (
-              <div key={c.id} className="flex items-center justify-between py-2.5 px-2 -mx-2 rounded-card-sm border-b border-border-subtle last:border-0 hover:bg-surface-1 transition-colors duration-150 cursor-pointer">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="size-8 rounded-card-sm bg-primary-light text-primary-nav flex items-center justify-center shrink-0">
-                    <NotesIcon />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-ui font-semibold text-heading m-0 truncate">{c.title}</p>
-                    <span className="text-badge text-muted">{c.author}</span>
-                  </div>
-                </div>
-                <span className="text-badge text-muted shrink-0 ml-3">{c.when}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Popularne tematy */}
-        <div className="bg-white rounded-card-lg shadow-card-sm p-6 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <p className="text-h3 font-bold text-heading m-0">Popularne tematy</p>
-            <button className="text-badge font-bold text-primary-nav hover:underline cursor-pointer">
-              Eksploruj
-            </button>
-          </div>
-          <div className="flex flex-col gap-2">
-            {trendingSubjects.map((s, i) => (
-              <div key={s.id} className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-card-sm cursor-pointer group hover:bg-surface-1 transition-colors duration-150">
-                <span className="text-badge font-bold text-muted w-5 shrink-0">{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-ui font-medium text-heading group-hover:text-primary-nav transition-colors truncate">
-                      {s.name}
-                    </span>
-                    <span className="text-badge text-muted shrink-0 ml-2">{s.count} notatek</span>
-                  </div>
-                  <div className="h-1 bg-surface-2 rounded-pill overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-pill"
-                      style={{ width: `${(s.count / trendingSubjects[0].count) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-      </div>
     </div>
   );
 }

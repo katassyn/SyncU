@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import type { ScheduleEntry } from '@syncu/types';
+import { ExamCard } from '@syncu/ui';
 import { fetchExams, fetchGroupSchedule, type ExamRecord } from '../lib/api';
 import { getStoredToken } from '../lib/auth';
-import { addDays, daysUntil, formatDDMM, formatRelativeDay } from '../lib/week';
+import { addDays, formatDDMM } from '../lib/week';
 
 // --------------- typy ---------------
 
@@ -45,8 +46,8 @@ const placeholderSessions = [
   },
 ];
 
-// G-12: kolokwia (deadlines) wpiete pod GET /exams - countdown liczony przez
-// formatRelativeDay. Stany: anon (niezalogowany) / loading / loaded / error.
+// G-12: kolokwia (deadlines) wpiete pod GET /exams - countdown w ExamCard.
+// Stany: anon (niezalogowany) / loading / loaded / error.
 type ExamsState =
   | { kind: 'anon' }
   | { kind: 'loading' }
@@ -211,9 +212,9 @@ function DeadlinesList({ state }: { state: ExamsState }) {
   if (state.kind === 'anon') {
     return (
       <div className="flex flex-col items-center justify-center flex-1 py-6 gap-2 text-center">
-        <p className="text-ui text-muted m-0">Zaloguj sie, aby widziec kolokwia.</p>
+        <p className="text-ui text-muted m-0">Zaloguj się, aby widzieć kolokwia.</p>
         <NavLink to="/login" className="text-badge font-bold text-primary-nav hover:underline">
-          Zaloguj sie →
+          Zaloguj się →
         </NavLink>
       </div>
     );
@@ -232,7 +233,7 @@ function DeadlinesList({ state }: { state: ExamsState }) {
   if (state.kind === 'error') {
     return (
       <div className="flex items-center justify-center flex-1 py-6">
-        <p className="text-ui text-muted m-0">Nie udalo sie pobrac kolokwiow.</p>
+        <p className="text-ui text-muted m-0">Nie udało się pobrać kolokwiów.</p>
       </div>
     );
   }
@@ -240,7 +241,7 @@ function DeadlinesList({ state }: { state: ExamsState }) {
   if (state.upcoming.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 py-6 gap-2 text-center">
-        <p className="text-ui text-muted m-0">Brak nadchodzacych kolokwiow.</p>
+        <p className="text-ui text-muted m-0">Brak nadchodzących kolokwiów.</p>
         <NavLink to="/exams" className="text-badge font-bold text-primary-nav hover:underline">
           Dodaj kolokwium →
         </NavLink>
@@ -249,29 +250,15 @@ function DeadlinesList({ state }: { state: ExamsState }) {
   }
 
   return (
-    <div className="flex flex-col flex-1">
-      {state.upcoming.map((exam, i) => {
-        const date = new Date(exam.date);
-        const urgent = daysUntil(date) <= 2;
-        return (
-          <div key={exam.id} className="flex items-start gap-3">
-            <div className="flex flex-col items-center shrink-0 pt-1">
-              <div className={['size-2 rounded-full shrink-0', urgent ? 'bg-danger' : 'bg-primary'].join(' ')} />
-              {i < state.upcoming.length - 1 && (
-                <div className="w-px bg-border-subtle mt-1" style={{ height: '2.5rem' }} />
-              )}
-            </div>
-            <div className="flex-1 min-w-0 pb-4 last:pb-0 cursor-pointer group">
-              <p className="text-body font-semibold text-heading m-0 leading-tight truncate group-hover:text-primary-nav transition-colors duration-150">
-                {exam.courseName}
-              </p>
-              <span className={['text-badge font-bold mt-0.5 inline-block capitalize', urgent ? 'text-danger' : 'text-muted'].join(' ')}>
-                {formatRelativeDay(date)}
-              </span>
-            </div>
-          </div>
-        );
-      })}
+    <div className="flex flex-col gap-3 flex-1">
+      {state.upcoming.map((exam) => (
+        <ExamCard
+          key={exam.id}
+          courseName={exam.courseName}
+          date={exam.date}
+          scope={exam.scope}
+        />
+      ))}
     </div>
   );
 }

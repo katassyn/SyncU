@@ -125,7 +125,7 @@ export default function Register() {
             to="/login"
             className="text-primary-nav font-semibold hover:underline"
           >
-            Zaloguj sie
+            Zaloguj się
           </NavLink>
         </p>
       </Card>
