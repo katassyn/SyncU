@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, Form, Select } from '@syncu/ui'
 import { fetchGroups, type GroupSummary } from '../lib/api'
+import { updateCurrentUserProfile } from '../lib/auth'
 
 /**
  * G-7.4: Strona /onboarding (uproszczona po decyzji "tylko PK niestacjonarne").
@@ -27,6 +28,8 @@ export default function Onboarding() {
   const navigate = useNavigate()
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [selected, setSelected] = useState<string>('')
+  const [saving, setSaving] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -74,16 +77,29 @@ export default function Onboarding() {
     })
   }, [state])
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!selected) return
+    setSaving(true)
+    setSubmitError(null)
+
     try {
-      localStorage.setItem(LS_GROUP_KEY, selected)
-    } catch {
-      // ignore (private mode)
+      await updateCurrentUserProfile({
+        university: 'Politechnika Krakowska',
+        fieldOfStudy: 'Informatyka',
+        yearOfStudy: parseYearFromGroup(selected),
+        groupId: selected,
+      })
+      try {
+        localStorage.setItem(LS_GROUP_KEY, selected)
+      } catch {
+        // ignore (private mode)
+      }
+      navigate('/today', { replace: true })
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Nieznany błąd zapisu profilu')
+      setSaving(false)
     }
-    // TODO: gdy Kamil ma G-7.2 (PATCH /me), tu dodatkowy fetch z token + body { groupId: selected }
-    navigate('/today', { replace: true })
   }
 
   return (
@@ -116,6 +132,7 @@ export default function Onboarding() {
               id="group"
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
+              disabled={saving}
             >
               {sortedGroups.map((g) => (
                 <option key={g.id} value={g.id}>
@@ -124,14 +141,18 @@ export default function Onboarding() {
               ))}
             </Select>
 
+            {submitError && (
+              <p className="text-ui text-danger -mt-1">{submitError}</p>
+            )}
+
             <Button
               type="submit"
               variant="primary"
               size="md"
               fullWidth
-              disabled={!selected}
+              disabled={!selected || saving}
             >
-              Kontynuuj
+              {saving ? 'Zapisywanie...' : 'Kontynuuj'}
             </Button>
           </Form>
         )}
@@ -154,4 +175,9 @@ function readStored(groups: GroupSummary[]): string | null {
   } catch {
     return null
   }
+}
+
+function parseYearFromGroup(groupId: string): number | null {
+  const year = Number(groupId.charAt(0))
+  return Number.isInteger(year) && year >= 1 && year <= 10 ? year : null
 }

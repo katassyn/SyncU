@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom';
-import { logoutUser } from '../lib/auth';
+import { Link, useNavigate } from 'react-router-dom';
+import { getUserInitial, logoutUser, useAuth } from '../lib/auth';
 
 interface ProfileDrawerProps {
   open: boolean;
@@ -8,6 +8,8 @@ interface ProfileDrawerProps {
 
 export function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
   const navigate = useNavigate();
+  const auth = useAuth();
+  const user = auth.kind === 'authenticated' ? auth.user : null;
 
   async function handleLogout() {
     onClose();
@@ -53,23 +55,27 @@ export function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
         {/* User info */}
         <div className="flex items-center gap-4 px-6 py-6 border-b border-border-subtle">
           <div className="size-14 rounded-pill border-2 border-primary/10 bg-primary-light text-primary-nav font-bold text-h3 flex items-center justify-center shrink-0">
-            A
+            {getUserInitial(user)}
           </div>
           <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-body font-bold text-heading truncate">Alex Student</span>
-            <span className="text-ui text-muted truncate">alex@university.edu</span>
+            <span className="text-body font-bold text-heading truncate">
+              {user?.displayName ?? 'Użytkownik'}
+            </span>
+            <span className="text-ui text-muted truncate">
+              {user?.email ?? 'Brak adresu email'}
+            </span>
           </div>
         </div>
 
         {/* Links */}
         <div className="flex flex-col gap-1 px-3 py-4 border-b border-border-subtle">
-          <a
-            href="/profile"
+          <Link
+            to="/profile"
             onClick={onClose}
             className="flex items-center gap-3 px-3 py-2.5 rounded-card-sm text-body font-medium text-heading hover:bg-surface-2 transition-colors cursor-pointer"
           >
             Profil
-          </a>
+          </Link>
           <span className="flex items-center gap-3 px-3 py-2.5 rounded-card-sm text-body font-medium text-muted cursor-not-allowed select-none">
             Ustawienia
           </span>

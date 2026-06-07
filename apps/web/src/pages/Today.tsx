@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import type { ScheduleEntry } from '@syncu/types';
 import { ExamCard } from '@syncu/ui';
 import { fetchExams, fetchGroupSchedule, type ExamRecord } from '../lib/api';
-import { getStoredToken } from '../lib/auth';
+import { getStoredToken, getUserFirstName, useAuth } from '../lib/auth';
 import { addDays, formatDDMM } from '../lib/week';
 
 // --------------- typy ---------------
@@ -266,6 +266,8 @@ function DeadlinesList({ state }: { state: ExamsState }) {
 // --------------- main ---------------
 
 export default function Today() {
+  const auth = useAuth();
+  const firstName = auth.kind === 'authenticated' ? getUserFirstName(auth.user) : '';
   const [scheduleState, setScheduleState] = useState<ScheduleState>(() =>
     localStorage.getItem('syncu.selectedGroup') ? { kind: 'loading' } : { kind: 'idle' }
   );
@@ -345,7 +347,7 @@ export default function Today() {
       {/* Powitanie */}
       <div className="mb-8">
         <p className="text-display font-extrabold text-heading m-0 leading-none">
-          Dzień dobry, Alex.
+          {firstName ? `Dzień dobry, ${firstName}.` : 'Dzień dobry.'}
         </p>
         <p className="text-h3 text-muted mt-2 mb-0">
           Masz <span className="font-bold text-primary-nav">{sessionCount} zajęć</span> dzisiaj.
