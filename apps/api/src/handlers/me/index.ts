@@ -5,6 +5,8 @@ import { users } from "../../db/schema";
 import { getAuthenticatedUser, getCurrentTimestamp, toAuthUser } from "../auth/shared";
 
 const patchMeBody = t.Object({
+	displayName: t.Optional(t.String({ minLength: 2, maxLength: 100 })),
+	university: t.Optional(t.Nullable(t.String({ maxLength: 150 }))),
 	fieldOfStudy: t.Optional(t.Nullable(t.String({ maxLength: 150 }))),
 	yearOfStudy: t.Optional(t.Nullable(t.Number({ minimum: 1, maximum: 10 }))),
 	groupId: t.Optional(t.Nullable(t.String({ maxLength: 50 }))),
@@ -24,6 +26,8 @@ export const meRoutes = new Elysia()
 			}
 
 			if (
+				body.displayName === undefined &&
+				body.university === undefined &&
 				body.fieldOfStudy === undefined &&
 				body.yearOfStudy === undefined &&
 				body.groupId === undefined
@@ -38,6 +42,8 @@ export const meRoutes = new Elysia()
 			const updatedUser = db
 				.update(users)
 				.set({
+					displayName: body.displayName === undefined ? currentUser.displayName : body.displayName,
+					university: body.university === undefined ? currentUser.university : body.university,
 					fieldOfStudy: body.fieldOfStudy === undefined ? currentUser.fieldOfStudy : body.fieldOfStudy,
 					yearOfStudy: body.yearOfStudy === undefined ? currentUser.yearOfStudy : body.yearOfStudy,
 					groupId: body.groupId === undefined ? currentUser.groupId : body.groupId,

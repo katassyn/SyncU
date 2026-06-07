@@ -24,10 +24,12 @@ export function AppLayout({ children }: AppLayoutProps) {
         {children}
       </main>
 
-      <ProfileDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-      />
+      {!isAuthPage && (
+        <ProfileDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+        />
+      )}
     </div>
   );
 }

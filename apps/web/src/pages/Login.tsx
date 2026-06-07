@@ -20,10 +20,15 @@ export default function Login() {
     setError(null)
     setLoading(true)
     try {
-      await loginUser(email, password)
+      const { user } = await loginUser(email, password)
       // Po loginie: jezeli user nie wybral jeszcze grupy, lec na onboarding;
       // w przeciwnym razie na /today.
-      const hasGroup = !!localStorage.getItem('syncu.selectedGroup')
+      const storedGroup = localStorage.getItem('syncu.selectedGroup')
+      const selectedGroup = user.groupId ?? storedGroup
+      if (user.groupId) {
+        localStorage.setItem('syncu.selectedGroup', user.groupId)
+      }
+      const hasGroup = !!selectedGroup
       navigate(hasGroup ? '/today' : '/onboarding', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Nieznany blad logowania')

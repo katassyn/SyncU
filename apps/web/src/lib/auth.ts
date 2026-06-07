@@ -9,7 +9,9 @@
  *  - POST /auth/logout     header: Authorization: Bearer <token>
  *                          ->  204 / no body
  *  - GET  /auth/me         header: Authorization: Bearer <token>
- *                          ->  AuthUser
+ *                          ->  { user }
+ *  - PATCH /me             header: Authorization: Bearer <token>
+ *                          ->  { user }
  *
  * Token zapisywany w localStorage pod kluczem `syncu.token`. To prosty
  * helper bez kontekstu Reacta - pelny `AuthContext` z reaktywnoscia
@@ -32,6 +34,7 @@ export type AuthUser = {
   university: string | null
   fieldOfStudy: string | null
   yearOfStudy: number | null
+  groupId: string | null
   createdAt: string
   updatedAt: string
 }
@@ -43,6 +46,27 @@ export type LoginResponse = {
 
 export type RegisterResponse = {
   user: AuthUser
+}
+
+type CurrentUserResponse = {
+  user: AuthUser
+}
+
+export type UpdateProfileInput = {
+  displayName?: string
+  university?: string | null
+  fieldOfStudy?: string | null
+  yearOfStudy?: number | null
+  groupId?: string | null
+}
+
+export function getUserInitial(user: Pick<AuthUser, 'displayName' | 'email'> | null): string {
+  const source = user?.displayName.trim() || user?.email.trim() || 'U'
+  return source.charAt(0).toUpperCase()
+}
+
+export function getUserFirstName(user: Pick<AuthUser, 'displayName'> | null): string {
+  return user?.displayName.trim().split(/\s+/)[0] ?? ''
 }
 
 /* --- Token storage --- */
@@ -137,14 +161,33 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   const token = getStoredToken()
   if (!token) return null
   try {
-    return await authFetch<AuthUser>('/auth/me', {
+    const res = await authFetch<CurrentUserResponse>('/auth/me', {
       headers: { Authorization: `Bearer ${token}` },
     })
+    return res.user
   } catch {
     // Token wygasl albo nieprawidlowy - czyscimy
     clearToken()
     return null
   }
+}
+
+export async function updateCurrentUserProfile(
+  input: UpdateProfileInput,
+): Promise<AuthUser> {
+  const token = getStoredToken()
+  if (!token) throw new Error('Unauthorized')
+
+  const res = await authFetch<CurrentUserResponse>('/me', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(input),
+  })
+
+  return res.user
 }
 
 /* --- React hook --- */
