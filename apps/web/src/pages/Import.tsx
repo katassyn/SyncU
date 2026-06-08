@@ -179,7 +179,7 @@ function ParsedPreview({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-4">
-        <label className="flex flex-col gap-1.5 min-w-[280px]">
+        <label className="flex flex-col gap-1.5 w-full sm:w-auto sm:min-w-[280px]">
           <span className="text-caption font-bold text-body tracking-label uppercase">
             Wybierz swoją grupę
           </span>
