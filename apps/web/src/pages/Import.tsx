@@ -190,7 +190,7 @@ function DropZone({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       className={[
-        'border-2 border-dashed rounded-card-lg p-12 text-center cursor-pointer',
+        'border-2 border-dashed rounded-card-lg p-8 sm:p-12 text-center cursor-pointer',
         'transition-colors duration-150',
         dragActive
           ? 'border-primary bg-primary-light'
@@ -226,7 +226,7 @@ function ParsedPreview({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-4">
-        <label className="flex flex-col gap-1.5 min-w-[280px]">
+        <label className="flex flex-col gap-1.5 w-full sm:w-auto sm:min-w-[280px]">
           <span className="text-caption font-bold text-body tracking-label uppercase">
             Wybierz swoją grupę
           </span>

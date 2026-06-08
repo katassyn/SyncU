@@ -87,7 +87,7 @@ export default function Profile() {
 
   if (auth.kind === 'loading' || !user || !formValues) {
     return (
-      <div className="px-8 py-8 max-w-4xl mx-auto">
+      <div className="px-4 sm:px-6 lg:px-8 py-8 max-w-4xl mx-auto">
         <p className="text-ui text-muted">Ładowanie profilu...</p>
       </div>
     )
@@ -162,7 +162,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="px-8 py-8 max-w-4xl mx-auto">
+    <div className="px-4 sm:px-6 lg:px-8 py-8 max-w-4xl mx-auto">
       <div className="flex items-center gap-6 mb-8">
         <div className="size-20 rounded-pill border-2 border-primary/10 bg-primary-light text-primary-nav font-bold text-display flex items-center justify-center shrink-0 select-none">
           {getUserInitial(user)}
@@ -257,6 +257,15 @@ export default function Profile() {
                       </option>
                     ))}
                   </Select>
+                  {(formValues.groupId || null) !== (user.groupId ?? null) && (
+                    <div className="rounded-card-sm border border-warning/40 bg-warning/5 px-3 py-2.5">
+                      <p className="text-caption text-heading m-0 leading-snug">
+                        <span className="font-bold text-warning">Uwaga: </span>
+                        zmiana grupy zaktualizuje Twój plan zajęć, kolokwia i statystyki
+                        na dane nowej grupy.
+                      </p>
+                    </div>
+                  )}
                 </>
               ) : (
                 <StudyRow label="Grupa" value={currentGroupLabel} />
