@@ -19,6 +19,12 @@ export type { SelectProps, SelectOption } from './components/Select';
 export { ExamCard } from './components/ExamCard';
 export type { ExamCardProps } from './components/ExamCard';
 
+export { FileCard } from './components/FileCard';
+export type { FileCardProps, FileCardStatus } from './components/FileCard';
+
+export { UploadDropzone } from './components/UploadDropzone';
+export type { UploadDropzoneProps } from './components/UploadDropzone';
+
 export { MemberBadge } from './components/MemberBadge';
 export type { MemberBadgeProps } from './components/MemberBadge';
 
