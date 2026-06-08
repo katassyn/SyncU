@@ -136,7 +136,10 @@ export default function ImportPage() {
 
       {phase.kind === 'saving' && (
         <div className="flex items-center gap-3 text-muted py-4">
-          <Spinner />
+          <svg className="animate-spin size-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
+            <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          </svg>
           <span>Zapisywanie...</span>
         </div>
       )}
