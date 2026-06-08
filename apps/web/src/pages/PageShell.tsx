@@ -15,7 +15,7 @@ type Props = {
 
 export function PageShell({ title, subtitle, children }: Props) {
   return (
-    <section className="mx-auto max-w-5xl px-6 py-8">
+    <section className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
       <h1 className="text-display text-heading">{title}</h1>
       {subtitle && (
         <p className="text-ui text-muted mt-1">{subtitle}</p>

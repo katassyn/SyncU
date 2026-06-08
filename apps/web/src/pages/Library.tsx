@@ -62,10 +62,10 @@ export default function Library() {
   const [activeTab, setActiveTab] = useState(0);
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 sm:px-6 lg:px-8 py-8">
 
       {/* Nagłówek */}
-      <div className="flex items-start justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
           <p className="text-display font-extrabold text-heading m-0 leading-none">
             Biblioteka Notatek
@@ -81,13 +81,13 @@ export default function Library() {
       </div>
 
       {/* Zakładki */}
-      <div className="flex items-center gap-1 border-b border-border-subtle mb-6">
+      <div className="flex items-center gap-1 border-b border-border-subtle mb-6 overflow-x-auto">
         {TABS.map((tab, i) => (
           <button
             key={tab}
             onClick={() => setActiveTab(i)}
             className={[
-              'px-4 py-2.5 text-ui font-medium transition-colors cursor-pointer rounded-t-card-sm',
+              'shrink-0 whitespace-nowrap px-4 py-2.5 text-ui font-medium transition-colors cursor-pointer rounded-t-card-sm',
               activeTab === i
                 ? 'text-primary-nav border-b-2 border-primary-nav -mb-px bg-transparent'
                 : 'text-muted hover:text-heading hover:bg-surface-1',
