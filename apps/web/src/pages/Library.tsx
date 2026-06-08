@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AuthorTag } from '@syncu/ui';
 
 // --------------- dane placeholder ---------------
 
@@ -45,7 +46,7 @@ function ResourceCard({ res }: { res: typeof resources[number] }) {
         </p>
 
         <div className="flex items-center justify-between mt-auto pt-2">
-          <span className="text-badge text-muted">{res.author}</span>
+          <AuthorTag name={res.author} />
           <span className="flex items-center gap-1 text-badge text-muted">
             <MembersIcon />
             {res.members}
@@ -123,7 +124,7 @@ export default function Library() {
             <p className="text-h3 font-bold text-heading m-0">{featured.title}</p>
             <p className="text-ui text-muted m-0">{featured.description}</p>
             <div className="flex items-center justify-between pt-1">
-              <span className="text-badge text-muted">{featured.author}</span>
+              <AuthorTag name={featured.author} />
               <span className="flex items-center gap-1 text-badge text-muted">
                 <MembersIcon />
                 {featured.members} członków
