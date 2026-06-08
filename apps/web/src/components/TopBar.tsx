@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { getUserInitial, useAuth } from '../lib/auth';
 
 interface TopBarProps {
   onProfileClick: () => void;
@@ -13,6 +14,8 @@ const NAV_LINKS = [
 
 export function TopBar({ onProfileClick }: TopBarProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const auth = useAuth();
+  const user = auth.kind === 'authenticated' ? auth.user : null;
 
   const desktopLinkClass = ({ isActive }: { isActive: boolean }) =>
     [
@@ -68,7 +71,7 @@ export function TopBar({ onProfileClick }: TopBarProps) {
                 aria-label="Otwórz profil"
                 className="size-8 sm:size-9 rounded-pill border-2 border-primary/10 bg-primary-light text-primary-nav font-bold text-caption flex items-center justify-center hover:border-primary/30 transition-colors cursor-pointer"
               >
-                A
+                {getUserInitial(user)}
               </button>
               <span className="hidden sm:block text-h3 font-bold text-primary-nav tracking-tight">
                 SyncU

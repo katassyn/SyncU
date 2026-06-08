@@ -97,6 +97,44 @@ describe("PATCH /me", () => {
 		expect(body.user.groupId).toBe("32_1");
 	});
 
+	test("updates account identity fields for authenticated user", async () => {
+		const loginResponse = await post("/auth/login", {
+			email: registrationPayload.email,
+			password: registrationPayload.password,
+		});
+		expect(loginResponse.status).toBe(200);
+
+		const loginBody = (await loginResponse.json()) as { token: string };
+		const response = await patch(
+			"/me",
+			{
+				displayName: "Kamil G.",
+				university: "Akademia Gorniczo-Hutnicza",
+			},
+			loginBody.token,
+		);
+
+		expect(response.status).toBe(200);
+
+		const body = (await response.json()) as {
+			user: {
+				email: string;
+				displayName: string;
+				university: string | null;
+				fieldOfStudy: string | null;
+				yearOfStudy: number | null;
+				groupId: string | null;
+			};
+		};
+
+		expect(body.user.email).toBe(registrationPayload.email);
+		expect(body.user.displayName).toBe("Kamil G.");
+		expect(body.user.university).toBe("Akademia Gorniczo-Hutnicza");
+		expect(body.user.fieldOfStudy).toBe("Informatyka Stosowana");
+		expect(body.user.yearOfStudy).toBe(3);
+		expect(body.user.groupId).toBe("32_1");
+	});
+
 	test("returns 401 when authorization header is missing", async () => {
 		const response = await patch("/me", {
 			yearOfStudy: 3,

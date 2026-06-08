@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-import { ExamCard } from '@syncu/ui'
-import { fetchExams, type ExamRecord } from '../lib/api'
+import { useEffect, useMemo, useState } from 'react'
+import { Button, ExamCard, Form, FormField, Input, Select } from '@syncu/ui'
+import { createExam, fetchExams, fetchWeekSchedule, type ExamRecord } from '../lib/api'
 import { PageShell } from './PageShell'
 
 type State =
@@ -8,9 +8,18 @@ type State =
   | { kind: 'loaded'; upcoming: ExamRecord[]; past: ExamRecord[] }
   | { kind: 'error' }
 
+type CourseOption = { id: number; name: string }
+
+type CoursesState =
+  | { kind: 'loading' }
+  | { kind: 'loaded'; courses: CourseOption[] }
+  | { kind: 'error' }
+
 export default function Exams() {
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [retry, setRetry] = useState(0)
+  const [coursesState, setCoursesState] = useState<CoursesState>({ kind: 'loading' })
+  const [showForm, setShowForm] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -33,8 +42,55 @@ export default function Exams() {
     return () => { cancelled = true }
   }, [retry])
 
+  // Lista przedmiotow do pickera w formularzu. Zrodlo: plan biezacego tygodnia
+  // (/timetable/week zwraca courses). UWAGA: brak dedykowanego GET /courses -
+  // jesli w biezacym tygodniu nie ma zajec, lista bedzie pusta. Docelowo backend
+  // powinien wystawic GET /courses (courses JOIN semesters WHERE userId = me).
+  useEffect(() => {
+    let cancelled = false
+    const today = new Date().toISOString().slice(0, 10)
+    fetchWeekSchedule(today)
+      .then((res) => {
+        if (cancelled) return
+        const unique = new Map<number, string>()
+        for (const course of res.courses) unique.set(course.id, course.name)
+        const courses = [...unique]
+          .map(([id, name]) => ({ id, name }))
+          .sort((a, b) => a.name.localeCompare(b.name, 'pl'))
+        setCoursesState({ kind: 'loaded', courses })
+      })
+      .catch(() => {
+        if (!cancelled) setCoursesState({ kind: 'error' })
+      })
+    return () => { cancelled = true }
+  }, [])
+
+  function handleCreated() {
+    setShowForm(false)
+    setState({ kind: 'loading' })
+    setRetry((n) => n + 1)
+  }
+
   return (
     <PageShell title="Kolokwia i egzaminy" subtitle="Twoje nadchodzące i minione terminy">
+
+      <div className="mb-6">
+        <Button
+          variant={showForm ? 'secondary' : 'primary'}
+          size="sm"
+          onClick={() => setShowForm((v) => !v)}
+        >
+          {showForm ? 'Zamknij formularz' : '+ Dodaj kolokwium'}
+        </Button>
+      </div>
+
+      {showForm && (
+        <AddExamForm
+          coursesState={coursesState}
+          onCreated={handleCreated}
+          onCancel={() => setShowForm(false)}
+        />
+      )}
 
       {state.kind === 'loading' && (
         <div className="flex flex-col gap-3 max-w-lg">
@@ -99,6 +155,131 @@ export default function Exams() {
       )}
 
     </PageShell>
+  )
+}
+
+function AddExamForm({
+  coursesState,
+  onCreated,
+  onCancel,
+}: {
+  coursesState: CoursesState
+  onCreated: () => void
+  onCancel: () => void
+}) {
+  const [courseId, setCourseId] = useState('')
+  const [date, setDate] = useState('')
+  const [scope, setScope] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const courseOptions = useMemo(
+    () =>
+      coursesState.kind === 'loaded'
+        ? coursesState.courses.map((c) => ({ value: String(c.id), label: c.name }))
+        : [],
+    [coursesState],
+  )
+
+  const noCourses = coursesState.kind === 'loaded' && courseOptions.length === 0
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!courseId) { setError('Wybierz przedmiot.'); return }
+    if (!date) { setError('Wybierz datę.'); return }
+
+    setSaving(true)
+    setError(null)
+    try {
+      // Data dnia -> ISO date-time (lokalne poludnie, by uniknac przesuniecia o dzien).
+      const isoDate = new Date(`${date}T12:00:00`).toISOString()
+      await createExam({
+        courseId: Number(courseId),
+        date: isoDate,
+        scope: scope.trim() || null,
+      })
+      onCreated()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nie udało się zapisać kolokwium.')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-card-lg shadow-card-sm p-6 mb-8 max-w-lg">
+      <p className="text-h3 font-bold text-heading mb-4">Nowe kolokwium</p>
+
+      {coursesState.kind === 'error' && (
+        <p className="text-ui text-danger mb-3">
+          Nie udało się pobrać listy przedmiotów. Spróbuj odświeżyć stronę.
+        </p>
+      )}
+
+      {noCourses ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-ui text-muted m-0">
+            Brak przedmiotów do wyboru w planie bieżącego tygodnia. Zaimportuj plan
+            zajęć, aby móc dodać kolokwium.
+          </p>
+          <div className="flex justify-end">
+            <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
+              Zamknij
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Form onSubmit={handleSubmit}>
+          <Select
+            label="Przedmiot"
+            id="exam-course"
+            placeholder="Wybierz przedmiot"
+            value={courseId}
+            onChange={(e) => setCourseId(e.target.value)}
+            options={courseOptions}
+            disabled={saving || coursesState.kind !== 'loaded'}
+            required
+          />
+
+          <FormField label="Data" htmlFor="exam-date">
+            <Input
+              id="exam-date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              disabled={saving}
+              required
+            />
+          </FormField>
+
+          <FormField
+            label="Zakres (opcjonalnie)"
+            htmlFor="exam-scope"
+            hint="Np. rozdziały albo tematy do nauki."
+          >
+            <textarea
+              id="exam-scope"
+              value={scope}
+              onChange={(e) => setScope(e.target.value)}
+              disabled={saving}
+              maxLength={1000}
+              rows={3}
+              className="w-full bg-surface-1 rounded-card-sm text-ui text-heading placeholder:text-muted border border-transparent focus:outline-none focus:border-primary focus:bg-white transition-colors duration-150 px-4 py-2.5 resize-y"
+            />
+          </FormField>
+
+          {error && <p className="text-ui text-danger">{error}</p>}
+
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" size="sm" onClick={onCancel} disabled={saving}>
+              Anuluj
+            </Button>
+            <Button type="submit" variant="primary" size="sm" disabled={saving}>
+              {saving ? 'Zapisywanie...' : 'Zapisz kolokwium'}
+            </Button>
+          </div>
+        </Form>
+      )}
+    </div>
   )
 }
 

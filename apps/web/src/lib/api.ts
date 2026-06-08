@@ -108,3 +108,27 @@ export type ExamsResponse = {
 export function fetchExams(): Promise<ExamsResponse> {
   return authedRequest<ExamsResponse>('/exams')
 }
+
+export type CreateExamInput = {
+  courseId: number
+  /** ISO date-time (np. z `new Date(...).toISOString()`). */
+  date: string
+  scope?: string | null
+}
+
+export type CreateExamResponse = {
+  exam: ExamRecord
+}
+
+/**
+ * POST /exams - utworz nowe kolokwium (wymaga tokenu).
+ * Backend (apps/api/src/handlers/exams/index.ts) waliduje, ze `courseId`
+ * nalezy do przedmiotow zalogowanego usera (semesters.userId = me).
+ */
+export function createExam(input: CreateExamInput): Promise<CreateExamResponse> {
+  return authedRequest<CreateExamResponse>('/exams', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+}
