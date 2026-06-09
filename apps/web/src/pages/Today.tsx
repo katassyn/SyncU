@@ -3,7 +3,8 @@ import { NavLink } from 'react-router-dom';
 import type { ScheduleEntry } from '@syncu/types';
 import { ExamCard } from '@syncu/ui';
 import { fetchExams, fetchGroupSchedule, type ExamRecord } from '../lib/api';
-import { getStoredToken, getUserFirstName, useAuth } from '../lib/auth';
+import { getStoredToken, getUserFirstName } from '../lib/auth';
+import { useAuth } from '../lib/AuthContext';
 import { addDays, formatDDMM } from '../lib/week';
 
 // --------------- typy ---------------

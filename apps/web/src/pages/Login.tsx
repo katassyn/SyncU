@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { Button, Card, Input, Form, FormField } from '@syncu/ui'
-import { loginUser } from '../lib/auth'
+import { useAuthActions } from '../lib/AuthContext'
 
 /**
  * G-6.9: Strona /login.
@@ -10,6 +10,7 @@ import { loginUser } from '../lib/auth'
  */
 export default function Login() {
   const navigate = useNavigate()
+  const { login } = useAuthActions()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -20,7 +21,7 @@ export default function Login() {
     setError(null)
     setLoading(true)
     try {
-      const { user } = await loginUser(email, password)
+      const { user } = await login(email, password)
       // Po loginie: jezeli user nie wybral jeszcze grupy, lec na onboarding;
       // w przeciwnym razie na /today.
       const storedGroup = localStorage.getItem('syncu.selectedGroup')

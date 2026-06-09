@@ -4,8 +4,8 @@ import {
   getUserInitial,
   type AuthUser,
   updateCurrentUserProfile,
-  useAuth,
 } from '../lib/auth'
+import { useAuth, useAuthActions } from '../lib/AuthContext'
 import { fetchGroups, type GroupSummary } from '../lib/api'
 
 const STUDY_PROFILE = {
@@ -33,6 +33,7 @@ type GroupsState =
 
 export default function Profile() {
   const auth = useAuth()
+  const { setUser } = useAuthActions()
   const [form, setForm] = useState<ProfileForm | null>(null)
   const [savedUser, setSavedUser] = useState<AuthUser | null>(null)
   const [editing, setEditing] = useState(false)
@@ -151,6 +152,7 @@ export default function Profile() {
 
       syncStoredGroup(updatedUser.groupId)
       setSavedUser(updatedUser)
+      setUser(updatedUser)
       setForm(null)
       setEditing(false)
       setSuccess('Zapisano zmiany.')
