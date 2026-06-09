@@ -168,9 +168,23 @@ export default function Library() {
       </div>
 
       {/* Siatka zasobów */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-5">
-        {resources.map(r => <ResourceCard key={r.id} res={r} />)}
-      </div>
+      {resources.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-5">
+          {resources.map(r => <ResourceCard key={r.id} res={r} />)}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-center mb-5">
+          <EmptyLibraryIcon />
+          <p className="text-h3 font-semibold text-heading m-0">Brak materiałów</p>
+          <p className="text-ui text-muted m-0 max-w-sm">
+            Nie ma jeszcze żadnych notatek ani materiałów. Utwórz pierwszą notatkę, aby zacząć.
+          </p>
+          <button className="flex items-center gap-2 bg-primary text-on-primary text-ui font-semibold rounded-pill px-5 py-2.5 hover:opacity-90 transition-opacity cursor-pointer">
+            <PlusIcon />
+            Utwórz notatkę
+          </button>
+        </div>
+      )}
 
     </div>
   );
@@ -200,6 +214,17 @@ function LargeNotesIcon() {
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
       <path d="M12 4h17l11 11v29a2 2 0 01-2 2H12a2 2 0 01-2-2V6a2 2 0 012-2z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="text-primary" />
       <path d="M29 4v11h11M16 24h16M16 31h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-primary" />
+    </svg>
+  );
+}
+
+function EmptyLibraryIcon() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true" className="text-muted">
+      <rect x="6" y="10" width="22" height="28" rx="2" stroke="currentColor" strokeWidth="2" />
+      <path d="M6 18h22M12 24h10M12 30h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <rect x="20" y="16" width="22" height="22" rx="2" stroke="currentColor" strokeWidth="2" />
+      <path d="M26 24h10M26 29h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }

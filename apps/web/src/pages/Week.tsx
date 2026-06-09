@@ -277,6 +277,18 @@ export default function Week() {
             </div>
           )}
 
+          {state.kind === 'error' && (
+            <Card variant="surface" padding="md" className="border border-danger/40 bg-danger/5">
+              <p className="text-danger font-semibold mb-1">Nie udało się załadować planu</p>
+              <p className="text-muted text-ui mb-3">{state.message}</p>
+              {state.groups && (
+                <Button variant="secondary" size="sm" onClick={() => loadSchedule(state.selected!, state.groups!, setState)}>
+                  Spróbuj ponownie
+                </Button>
+              )}
+            </Card>
+          )}
+
           {state.kind === 'loaded' && dayEntries.length > 0 && (
             <div className="flex flex-col gap-3">
               {dayEntries.map((e, i) => (
@@ -369,6 +381,18 @@ export default function Week() {
 
           {(state.kind === 'loadingGroups' || state.kind === 'loadingSchedule') && (
             <div className="h-96 rounded-card-sm bg-surface-1 animate-pulse" />
+          )}
+
+          {state.kind === 'error' && (
+            <Card variant="surface" padding="md" className="border border-danger/40 bg-danger/5">
+              <p className="text-danger font-semibold mb-1">Nie udało się załadować planu</p>
+              <p className="text-muted text-ui mb-3">{state.message}</p>
+              {state.groups && (
+                <Button variant="secondary" size="sm" onClick={() => loadSchedule(state.selected!, state.groups!, setState)}>
+                  Spróbuj ponownie
+                </Button>
+              )}
+            </Card>
           )}
 
           {state.kind === 'loaded' && (

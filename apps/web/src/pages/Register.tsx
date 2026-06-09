@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { Button, Card, Input, Form, FormField } from '@syncu/ui'
-import { registerUser } from '../lib/auth'
+import { useAuthActions } from '../lib/AuthContext'
 
 /**
  * G-6.10: Strona /register.
@@ -11,6 +11,7 @@ import { registerUser } from '../lib/auth'
  */
 export default function Register() {
   const navigate = useNavigate()
+  const { register } = useAuthActions()
   const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
@@ -37,7 +38,7 @@ export default function Register() {
 
     setLoading(true)
     try {
-      await registerUser(email, password, displayName.trim())
+      await register(email, password, displayName.trim())
       // Nowy user nie ma jeszcze wybranej grupy -> onboarding
       navigate('/onboarding', { replace: true })
     } catch (err) {

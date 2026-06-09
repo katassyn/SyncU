@@ -18,8 +18,6 @@
  * (rerender Topbara po zalogowaniu itd.) robi Aleks w G-6.7.
  */
 
-import { useEffect, useState } from 'react'
-
 const API_BASE: string =
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001'
 
@@ -190,32 +188,3 @@ export async function updateCurrentUserProfile(
   return res.user
 }
 
-/* --- React hook --- */
-
-type AuthState =
-  | { kind: 'loading' }
-  | { kind: 'authenticated'; user: AuthUser }
-  | { kind: 'anonymous' }
-
-/**
- * Minimalny hook do odczytu stanu zalogowania. Aleks pozniej zastapi to
- * pelnym AuthContext (Provider + reaktywnosc + cache miedzy komponentami).
- * Na razie kazdy komponent ktory uzywa useAuth robi wlasny fetch /auth/me
- * przy mount - troche redundantne ale wystarczy na 2 strony (Login, Register).
- */
-export function useAuth(): AuthState {
-  const [state, setState] = useState<AuthState>({ kind: 'loading' })
-
-  useEffect(() => {
-    let cancelled = false
-    getCurrentUser().then((user) => {
-      if (cancelled) return
-      setState(user ? { kind: 'authenticated', user } : { kind: 'anonymous' })
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  return state
-}

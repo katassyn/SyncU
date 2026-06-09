@@ -3,7 +3,8 @@ import { NavLink } from 'react-router-dom';
 import type { ScheduleEntry } from '@syncu/types';
 import { ExamCard } from '@syncu/ui';
 import { fetchExams, fetchGroupSchedule, type ExamRecord } from '../lib/api';
-import { getStoredToken, getUserFirstName, useAuth } from '../lib/auth';
+import { getStoredToken, getUserFirstName } from '../lib/auth';
+import { useAuth } from '../lib/AuthContext';
 import { addDays, formatDDMM } from '../lib/week';
 
 // --------------- typy ---------------
@@ -112,6 +113,17 @@ function TodaySessionsList({ state, todayEntries }: { state: ScheduleState; toda
         {[0, 1, 2].map(i => (
           <div key={i} className="h-16 rounded-card-sm bg-surface-1 animate-pulse" />
         ))}
+      </div>
+    );
+  }
+
+  if (state.kind === 'error') {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+        <p className="text-ui text-muted m-0">Nie udało się pobrać planu zajęć.</p>
+        <NavLink to="/import" className="text-badge font-bold text-primary-nav hover:underline">
+          Zaimportuj plan →
+        </NavLink>
       </div>
     );
   }
