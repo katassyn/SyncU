@@ -89,7 +89,17 @@ export default function Profile() {
   if (auth.kind === 'loading' || !user || !formValues) {
     return (
       <div className="px-4 sm:px-6 lg:px-8 py-8 max-w-4xl mx-auto">
-        <p className="text-ui text-muted">Ładowanie profilu...</p>
+        <div className="flex items-center gap-6 mb-8">
+          <div className="size-20 rounded-pill bg-surface-1 animate-pulse shrink-0" />
+          <div className="flex flex-col gap-2 flex-1">
+            <div className="h-8 w-48 rounded-card-sm bg-surface-1 animate-pulse" />
+            <div className="h-4 w-32 rounded-card-sm bg-surface-1 animate-pulse" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-7 h-64 rounded-card-lg bg-surface-1 animate-pulse" />
+          <div className="lg:col-span-5 h-64 rounded-card-lg bg-surface-1 animate-pulse" />
+        </div>
       </div>
     )
   }
