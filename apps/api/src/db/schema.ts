@@ -152,6 +152,48 @@ export const exams = sqliteTable(
 	}),
 );
 
+export const userEvents = sqliteTable(
+	"user_events",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		userId: integer("user_id")
+			.notNull()
+			.references(() => users.id),
+		title: text("title").notNull(),
+		date: text("date").notNull(),
+		startTime: text("start_time").notNull(),
+		endTime: text("end_time").notNull(),
+		room: text("room"),
+		createdAt: text("created_at").notNull(),
+	},
+	(table) => ({
+		userIdIdx: index("idx_user_events_user_id").on(table.userId),
+		dateIdx: index("idx_user_events_date").on(table.date),
+	}),
+);
+
+export const materials = sqliteTable(
+	"materials",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		userId: integer("user_id")
+			.notNull()
+			.references(() => users.id),
+		groupId: text("group_id").notNull(),
+		courseName: text("course_name"),
+		title: text("title").notNull(),
+		kind: text("kind").notNull(),
+		url: text("url"),
+		content: text("content"),
+		fileName: text("file_name"),
+		createdAt: text("created_at").notNull(),
+	},
+	(table) => ({
+		userIdIdx: index("idx_materials_user_id").on(table.userId),
+		groupIdIdx: index("idx_materials_group_id").on(table.groupId),
+	}),
+);
+
 export const scheduleChanges = sqliteTable(
 	"schedule_changes",
 	{

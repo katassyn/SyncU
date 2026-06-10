@@ -4,12 +4,17 @@ import type { ClassSessionType, ScheduleData, ScheduleEntry, WeekEvent } from '@
 import { normalize } from '@syncu/core'
 import { Button, Card } from '@syncu/ui'
 import {
-  fetchGroupSchedule,
+  createEvent,
+  deleteEvent,
   fetchGroups,
+  fetchMyEvents,
   fetchScheduleChanges,
+  fetchScheduleWithMyEvents,
   type GroupSummary,
   type ScheduleChangeRecord,
+  type UserEventRecord,
 } from '../lib/api'
+import { getStoredToken } from '../lib/auth'
 import {
   addDays,
   addMonths,
@@ -258,6 +263,13 @@ export default function Week() {
         />
       )}
 
+      {/* Wlasne wydarzenia - po dodaniu/usunieciu przeladuj plan (merge) */}
+      {state.kind === 'loaded' && (
+        <UserEventsPanel
+          onChanged={() => loadSchedule(state.selected, state.groups, setState)}
+        />
+      )}
+
       {/* ── Day view ── */}
       {view === 'day' && (
         <>
@@ -490,7 +502,7 @@ function loadSchedule(
   setState: React.Dispatch<React.SetStateAction<State>>,
 ): void {
   setState({ kind: 'loadingSchedule', groups, selected: groupId })
-  fetchGroupSchedule(groupId)
+  fetchScheduleWithMyEvents(groupId)
     .then((data) => setState({ kind: 'loaded', groups, selected: groupId, data }))
     .catch((err) =>
       setState({
@@ -655,6 +667,173 @@ function MonthNav({
       <span className="ml-3 text-ui font-semibold text-heading">
         {formatMonthLabel(monthDate)}
       </span>
+    </div>
+  )
+}
+
+/**
+ * Wlasne wydarzenia usera (poza planem PK): toggle + formularz + lista z
+ * usuwaniem. Po kazdej zmianie wola `onChanged`, zeby Week przeladowal plan
+ * (eventy sa mergowane do ScheduleData w fetchScheduleWithMyEvents).
+ */
+function UserEventsPanel({ onChanged }: { onChanged: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [events, setEvents] = useState<UserEventRecord[]>([])
+  const [title, setTitle] = useState('')
+  const [date, setDate] = useState('')
+  const [startTime, setStartTime] = useState('')
+  const [endTime, setEndTime] = useState('')
+  const [room, setRoom] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const isLoggedIn = !!getStoredToken()
+
+  useEffect(() => {
+    if (!open || !isLoggedIn) return
+    let cancelled = false
+    fetchMyEvents()
+      .then((res) => {
+        if (!cancelled) setEvents(res.events)
+      })
+      .catch(() => {
+        if (!cancelled) setEvents([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, isLoggedIn])
+
+  if (!isLoggedIn) return null
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!title.trim() || !date || !startTime || !endTime) {
+      setError('Uzupełnij tytuł, datę i godziny.')
+      return
+    }
+    if (endTime <= startTime) {
+      setError('Godzina końca musi być po godzinie startu.')
+      return
+    }
+    setSaving(true)
+    setError(null)
+    try {
+      const res = await createEvent({
+        title: title.trim(),
+        date,
+        startTime,
+        endTime,
+        room: room.trim() || null,
+      })
+      setEvents((current) => [...current, res.event])
+      setTitle('')
+      setRoom('')
+      onChanged()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nie udało się zapisać wydarzenia.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete(id: number) {
+    try {
+      await deleteEvent(id)
+      setEvents((current) => current.filter((e) => e.id !== id))
+      onChanged()
+    } catch {
+      // zostawiamy na liscie - kolejna proba mozliwa
+    }
+  }
+
+  return (
+    <div className="mb-6">
+      <Button type="button" variant={open ? 'secondary' : 'primary'} size="sm" onClick={() => setOpen((v) => !v)}>
+        {open ? 'Zamknij wydarzenia' : '+ Dodaj wydarzenie'}
+      </Button>
+
+      {open && (
+        <Card variant="white" padding="md" className="mt-3 max-w-xl">
+          <p className="text-ui font-bold text-heading mb-3 mt-0">Nowe wydarzenie</p>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Tytuł (np. Spotkanie projektowe)"
+              maxLength={200}
+              disabled={saving}
+              className="w-full bg-surface-1 rounded-pill px-4 py-2.5 text-ui text-heading placeholder:text-muted border border-transparent focus:outline-none focus:border-primary focus:bg-white transition-colors"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                disabled={saving}
+                className="w-full bg-surface-1 rounded-pill px-4 py-2.5 text-ui text-heading border border-transparent focus:outline-none focus:border-primary focus:bg-white transition-colors"
+              />
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                disabled={saving}
+                aria-label="Godzina rozpoczęcia"
+                className="w-full bg-surface-1 rounded-pill px-4 py-2.5 text-ui text-heading border border-transparent focus:outline-none focus:border-primary focus:bg-white transition-colors"
+              />
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                disabled={saving}
+                aria-label="Godzina zakończenia"
+                className="w-full bg-surface-1 rounded-pill px-4 py-2.5 text-ui text-heading border border-transparent focus:outline-none focus:border-primary focus:bg-white transition-colors"
+              />
+            </div>
+            <input
+              value={room}
+              onChange={(e) => setRoom(e.target.value)}
+              placeholder="Sala / miejsce (opcjonalnie)"
+              maxLength={100}
+              disabled={saving}
+              className="w-full bg-surface-1 rounded-pill px-4 py-2.5 text-ui text-heading placeholder:text-muted border border-transparent focus:outline-none focus:border-primary focus:bg-white transition-colors"
+            />
+            {error && <p className="text-ui text-danger m-0">{error}</p>}
+            <div className="flex justify-end">
+              <Button type="submit" variant="primary" size="sm" disabled={saving}>
+                {saving ? 'Zapisywanie...' : 'Zapisz wydarzenie'}
+              </Button>
+            </div>
+          </form>
+
+          {events.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border-subtle flex flex-col gap-2">
+              <p className="text-caption font-bold text-muted uppercase tracking-label m-0">
+                Twoje wydarzenia
+              </p>
+              {events.map((event) => (
+                <div key={event.id} className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-ui font-semibold text-heading m-0 truncate">{event.title}</p>
+                    <p className="text-caption text-muted m-0">
+                      {event.date} · {event.startTime}–{event.endTime}
+                      {event.room ? ` · ${event.room}` : ''}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(event.id)}
+                    aria-label={`Usuń wydarzenie ${event.title}`}
+                    className="text-muted hover:text-danger text-lg leading-none cursor-pointer shrink-0 px-1"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   )
 }

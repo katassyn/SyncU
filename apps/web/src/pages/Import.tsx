@@ -6,21 +6,23 @@ import {
   type ScheduleSection,
 } from '@syncu/core'
 import { Button, Card } from '@syncu/ui'
+import { confirmTimetableImport } from '../lib/api'
+import { getCurrentUser } from '../lib/auth'
 import { PageShell } from './PageShell'
 
 /**
- * G-3 #2 i #3:
+ * G-3 #2 i #3 + G-5.6:
  *  - upload .xlsx (drag&drop albo input file)
  *  - parsowanie przez `importTimetable` z @syncu/core
  *  - preview: dropdown wyboru grupy + tabela wpisow
- *  - przycisk "Zapisz" -> confirmImport() -> POST do api (mock dopoki Maks
- *    nie zrobi G-5.6 - wpiecia pod realne /timetable/import + /import/confirm).
+ *  - przycisk "Zapisz" -> POST /timetable/import/confirm (persystencja w bazie:
+ *    semestr + przedmioty + class_sessions zalogowanego usera).
  */
 
 type Phase =
   | { kind: 'idle' }
   | { kind: 'parsing' }
-  | { kind: 'parsed'; data: ParsedTimetable; selectedSectionId: string }
+  | { kind: 'parsed'; data: ParsedTimetable; selectedSectionId: string; fileName: string }
   | { kind: 'error'; message: string }
   | { kind: 'saving' }
   | { kind: 'saved' }
@@ -41,7 +43,7 @@ export default function ImportPage() {
       const buffer = await file.arrayBuffer()
       const data = importTimetable(buffer)
       const firstId = data.sections[0]?.id ?? ''
-      setPhase({ kind: 'parsed', data, selectedSectionId: firstId })
+      setPhase({ kind: 'parsed', data, selectedSectionId: firstId, fileName: file.name })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Nieznany blad parsera'
       setPhase({ kind: 'error', message })
@@ -60,17 +62,34 @@ export default function ImportPage() {
     if (file) handleFile(file)
   }
 
-  async function confirmImport(section: ScheduleSection) {
+  async function confirmImport(section: ScheduleSection, fileName: string) {
     setPhase({ kind: 'saving' })
     try {
-      // TODO (G-5.6): prawdziwy POST do /timetable/import + /timetable/import/confirm.
-      // Endpointy juz dostepne na main, brakuje wpiecia po stronie frontu.
-      console.log('[confirmImport] TODO: wyslij do API', {
-        sectionId: section.id,
-        groupId: section.groupId,
-        entriesCount: section.entries.length,
+      const user = await getCurrentUser()
+      if (!user) {
+        setPhase({ kind: 'error', message: 'Zaloguj się, aby zapisać plan na swoim koncie.' })
+        return
+      }
+
+      await confirmTimetableImport({
+        user: {
+          email: user.email,
+          displayName: user.displayName,
+          university: user.university,
+          fieldOfStudy: user.fieldOfStudy,
+          yearOfStudy: user.yearOfStudy,
+        },
+        semester: deriveCurrentSemester(),
+        source: { kind: 'upload', filename: fileName },
+        section: {
+          id: section.id,
+          label: section.label,
+          yearSemLabel: section.yearSemLabel,
+          groupId: section.groupId,
+          entries: section.entries,
+        },
       })
-      await new Promise((r) => setTimeout(r, 400)) // udajemy network
+
       setPhase({ kind: 'saved' })
       setTimeout(() => navigate('/today'), 800)
     } catch (err) {
@@ -136,7 +155,7 @@ export default function ImportPage() {
           data={phase.data}
           selectedId={phase.selectedSectionId}
           onSelect={(id) => setPhase({ ...phase, selectedSectionId: id })}
-          onConfirm={(section) => confirmImport(section)}
+          onConfirm={(section) => confirmImport(section, phase.fileName)}
           onCancel={() => setPhase({ kind: 'idle' })}
         />
       )}
@@ -302,6 +321,24 @@ function ParsedPreview({
       )}
     </div>
   )
+}
+
+/**
+ * Semestr wyliczany z biezacej daty: pazdziernik-luty = zimowy, marzec-wrzesien
+ * = letni. `isActive: true`, bo GET /timetable/week filtruje po aktywnym semestrze.
+ */
+function deriveCurrentSemester() {
+  const now = new Date()
+  const month = now.getMonth() + 1
+  const year = now.getFullYear()
+  const term = month >= 10 || month <= 2 ? 'zimowy' : 'letni'
+  const academicYear = month >= 10 ? `${year}/${year + 1}` : `${year - 1}/${year}`
+  return {
+    name: `Semestr ${term} ${academicYear}`,
+    academicYear,
+    term,
+    isActive: true,
+  }
 }
 
 function Spinner() {

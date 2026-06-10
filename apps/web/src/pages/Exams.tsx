@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import { NavLink } from 'react-router-dom'
 import { Button, ExamCard, Form, FormField, Input, Select } from '@syncu/ui'
-import { createExam, fetchExams, fetchWeekSchedule, type ExamRecord } from '../lib/api'
+import { createExam, fetchCourses, fetchExams, type ExamRecord } from '../lib/api'
 import { PageShell } from './PageShell'
 
 type State =
@@ -42,14 +43,11 @@ export default function Exams() {
     return () => { cancelled = true }
   }, [retry])
 
-  // Lista przedmiotow do pickera w formularzu. Zrodlo: plan biezacego tygodnia
-  // (/timetable/week zwraca courses). UWAGA: brak dedykowanego GET /courses -
-  // jesli w biezacym tygodniu nie ma zajec, lista bedzie pusta. Docelowo backend
-  // powinien wystawic GET /courses (courses JOIN semesters WHERE userId = me).
+  // Lista przedmiotow do pickera w formularzu - GET /courses (wszystkie
+  // przedmioty usera ze wszystkich semestrow, niezaleznie od tygodnia).
   useEffect(() => {
     let cancelled = false
-    const today = new Date().toISOString().slice(0, 10)
-    fetchWeekSchedule(today)
+    fetchCourses()
       .then((res) => {
         if (cancelled) return
         const unique = new Map<number, string>()
@@ -127,12 +125,17 @@ export default function Exams() {
           <p className="text-h3 font-bold text-heading mb-4">Nadchodzące</p>
           <div className="flex flex-col gap-3 max-w-lg">
             {state.upcoming.map((exam) => (
-              <ExamCard
+              <NavLink
                 key={exam.id}
-                courseName={exam.courseName}
-                date={exam.date}
-                scope={exam.scope}
-              />
+                to={`/subject/${exam.courseId}`}
+                className="block rounded-card-sm hover:bg-surface-1 transition-colors"
+              >
+                <ExamCard
+                  courseName={exam.courseName}
+                  date={exam.date}
+                  scope={exam.scope}
+                />
+              </NavLink>
             ))}
           </div>
         </section>
@@ -143,12 +146,17 @@ export default function Exams() {
           <p className="text-h3 font-bold text-muted mb-4">Minione</p>
           <div className="flex flex-col gap-3 max-w-lg">
             {state.past.map((exam) => (
-              <ExamCard
+              <NavLink
                 key={exam.id}
-                courseName={exam.courseName}
-                date={exam.date}
-                scope={exam.scope}
-              />
+                to={`/subject/${exam.courseId}`}
+                className="block rounded-card-sm hover:bg-surface-1 transition-colors"
+              >
+                <ExamCard
+                  courseName={exam.courseName}
+                  date={exam.date}
+                  scope={exam.scope}
+                />
+              </NavLink>
             ))}
           </div>
         </section>

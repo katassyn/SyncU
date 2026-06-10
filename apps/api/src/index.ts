@@ -2,7 +2,11 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import logixlysia from "logixlysia";
 import { authRoutes } from "./handlers/auth";
+import { coursesRoutes } from "./handlers/courses";
+import { eventsRoutes } from "./handlers/events";
 import { examsRoutes } from "./handlers/exams";
+import { groupsRoutes } from "./handlers/groups";
+import { filesRoutes, materialsRoutes } from "./handlers/materials";
 import { meRoutes } from "./handlers/me";
 import { scheduleRoutes } from "./handlers/schedule";
 import { timetableRoutes } from "./handlers/timetable";
@@ -28,7 +32,12 @@ const app = new Elysia()
 		})
 	)
 	.use(authRoutes)
+	.use(coursesRoutes)
+	.use(eventsRoutes)
 	.use(examsRoutes)
+	.use(groupsRoutes)
+	.use(materialsRoutes)
+	.use(filesRoutes)
 	.use(meRoutes)
 	.use(scheduleRoutes)
 	.use(timetableRoutes)

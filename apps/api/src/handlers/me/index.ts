@@ -1,8 +1,13 @@
 import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../../db/client";
-import { users } from "../../db/schema";
-import { getAuthenticatedUser, getCurrentTimestamp, toAuthUser } from "../auth/shared";
+import { authCredentials, users } from "../../db/schema";
+import {
+	generateSalt,
+	getAuthenticatedUser,
+	getCurrentTimestamp,
+	toAuthUser,
+} from "../auth/shared";
 
 const patchMeBody = t.Object({
 	displayName: t.Optional(t.String({ minLength: 2, maxLength: 100 })),
@@ -12,7 +17,77 @@ const patchMeBody = t.Object({
 	groupId: t.Optional(t.Nullable(t.String({ maxLength: 50 }))),
 });
 
+const changePasswordBody = t.Object({
+	currentPassword: t.String({ minLength: 8, maxLength: 128 }),
+	newPassword: t.String({ minLength: 8, maxLength: 128 }),
+});
+
 export const meRoutes = new Elysia()
+	.patch(
+		"/me/password",
+		async ({ headers, body, set }) => {
+			const currentUser = await getAuthenticatedUser(headers.authorization);
+
+			if (!currentUser) {
+				set.status = 401;
+				return {
+					message: "Unauthorized.",
+				};
+			}
+
+			const credential = db
+				.select({
+					id: authCredentials.id,
+					passwordHash: authCredentials.passwordHash,
+					salt: authCredentials.salt,
+				})
+				.from(authCredentials)
+				.where(eq(authCredentials.userId, currentUser.id))
+				.get();
+
+			if (!credential) {
+				set.status = 404;
+				return {
+					message: "Credentials not found.",
+				};
+			}
+
+			// Ten sam schemat co w /auth/login: hash("haslo:salt")
+			const isCurrentValid = await Bun.password.verify(
+				`${body.currentPassword}:${credential.salt}`,
+				credential.passwordHash,
+			);
+
+			if (!isCurrentValid) {
+				set.status = 400;
+				return {
+					message: "Obecne hasło jest nieprawidłowe.",
+				};
+			}
+
+			const newSalt = generateSalt();
+			// Ten sam algorytm co przy rejestracji (handlers/auth/index.ts)
+			const newHash = await Bun.password.hash(`${body.newPassword}:${newSalt}`, {
+				algorithm: "argon2id",
+			});
+
+			db.update(authCredentials)
+				.set({
+					passwordHash: newHash,
+					salt: newSalt,
+					updatedAt: getCurrentTimestamp(),
+				})
+				.where(eq(authCredentials.id, credential.id))
+				.run();
+
+			return {
+				changed: true,
+			};
+		},
+		{
+			body: changePasswordBody,
+		},
+	)
 	.patch(
 		"/me",
 		async ({ headers, body, set }) => {

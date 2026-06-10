@@ -190,6 +190,24 @@ export async function updateCurrentUserProfile(
   return res.user
 }
 
+/** PATCH /me/password - zmiana hasla (wymaga podania obecnego). */
+export async function changeCurrentUserPassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const token = getStoredToken()
+  if (!token) throw new Error('Unauthorized')
+
+  await authFetch<{ changed: boolean }>('/me/password', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+}
+
 /* --- React hook --- */
 
 type AuthState =
