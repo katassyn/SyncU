@@ -1,7 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../../db/client";
-import { courses, exams, semesters } from "../../db/schema";
+import { courses, exams, semesters, users } from "../../db/schema";
 import { getAuthenticatedUser, getCurrentTimestamp } from "../auth/shared";
 
 const createExamBody = t.Object({
@@ -72,33 +72,74 @@ export const examsRoutes = new Elysia({ prefix: "/exams" })
 			body: createExamBody,
 		},
 	)
-	.get("/", async ({ headers, set }) => {
-		const currentUser = await getAuthenticatedUser(headers.authorization);
+	.get(
+		"/",
+		async ({ headers, query, set }) => {
+			const currentUser = await getAuthenticatedUser(headers.authorization);
 
-		if (!currentUser) {
-			set.status = 401;
+			if (!currentUser) {
+				set.status = 401;
+				return {
+					message: "Unauthorized.",
+				};
+			}
+
+			// G-13: ?view=group -> kolokwia wszystkich userow z mojej grupy,
+			// z nazwa autora. Domyslnie (bez query) - tylko moje, jak dotad.
+			if (query.view === "group") {
+				if (!currentUser.groupId) {
+					set.status = 400;
+					return {
+						message: "User has no group selected.",
+					};
+				}
+
+				const rows = db
+					.select({
+						id: exams.id,
+						userId: exams.userId,
+						courseId: exams.courseId,
+						courseName: courses.name,
+						date: exams.date,
+						scope: exams.scope,
+						createdAt: exams.createdAt,
+						authorName: users.displayName,
+					})
+					.from(exams)
+					.innerJoin(courses, eq(exams.courseId, courses.id))
+					.innerJoin(users, eq(exams.userId, users.id))
+					.where(eq(users.groupId, currentUser.groupId))
+					.orderBy(asc(exams.date), asc(exams.id))
+					.all();
+
+				return {
+					exams: rows,
+				};
+			}
+
+			const rows = db
+				.select({
+					id: exams.id,
+					userId: exams.userId,
+					courseId: exams.courseId,
+					courseName: courses.name,
+					date: exams.date,
+					scope: exams.scope,
+					createdAt: exams.createdAt,
+				})
+				.from(exams)
+				.innerJoin(courses, eq(exams.courseId, courses.id))
+				.where(eq(exams.userId, currentUser.id))
+				.orderBy(asc(exams.date), asc(exams.id))
+				.all();
+
 			return {
-				message: "Unauthorized.",
+				exams: rows,
 			};
-		}
-
-		const rows = db
-			.select({
-				id: exams.id,
-				userId: exams.userId,
-				courseId: exams.courseId,
-				courseName: courses.name,
-				date: exams.date,
-				scope: exams.scope,
-				createdAt: exams.createdAt,
-			})
-			.from(exams)
-			.innerJoin(courses, eq(exams.courseId, courses.id))
-			.where(eq(exams.userId, currentUser.id))
-			.orderBy(asc(exams.date), asc(exams.id))
-			.all();
-
-		return {
-			exams: rows,
-		};
-	});
+		},
+		{
+			query: t.Object({
+				view: t.Optional(t.String()),
+			}),
+		},
+	);

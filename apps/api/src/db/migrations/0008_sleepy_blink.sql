@@ -1,0 +1,1 @@
+ALTER TABLE `materials` ADD `file_name` text;

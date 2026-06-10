@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import type { ScheduleEntry } from '@syncu/types';
 import { ExamCard } from '@syncu/ui';
-import { fetchExams, fetchGroupSchedule, type ExamRecord } from '../lib/api';
+import { fetchExams, fetchScheduleWithMyEvents, type ExamRecord } from '../lib/api';
 import { getStoredToken, getUserFirstName } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 import { addDays, formatDDMM } from '../lib/week';
@@ -313,7 +313,7 @@ export default function Today() {
     if (!groupId) return;
 
     let cancelled = false;
-    fetchGroupSchedule(groupId)
+    fetchScheduleWithMyEvents(groupId)
       .then(data => {
         if (cancelled) return;
         const allEntries = data.sections

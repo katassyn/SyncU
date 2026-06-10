@@ -10,6 +10,7 @@ interface TopBarProps {
 const NAV_LINKS = [
   { to: '/today',   label: 'Dashboard' },
   { to: '/week',    label: 'Kalendarz' },
+  { to: '/exams',   label: 'Kolokwia' },
   { to: '/library', label: 'Grupy' },
 ] as const;
 

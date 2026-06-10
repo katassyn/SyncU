@@ -14,8 +14,8 @@
  *                          ->  { user }
  *
  * Token zapisywany w localStorage pod kluczem `syncu.token`. To prosty
- * helper bez kontekstu Reacta - pelny `AuthContext` z reaktywnoscia
- * (rerender Topbara po zalogowaniu itd.) robi Aleks w G-6.7.
+ * helper bez kontekstu Reacta - reaktywny stan auth (useAuth/useAuthActions)
+ * zyje w `lib/AuthContext.tsx` i korzysta z tych funkcji pod spodem.
  */
 
 const API_BASE: string =
@@ -188,3 +188,23 @@ export async function updateCurrentUserProfile(
   return res.user
 }
 
+/** PATCH /me/password - zmiana hasla (wymaga podania obecnego). */
+export async function changeCurrentUserPassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const token = getStoredToken()
+  if (!token) throw new Error('Unauthorized')
+
+  await authFetch<{ changed: boolean }>('/me/password', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+}
+
+// Hook useAuth zostal przeniesiony do lib/AuthContext.tsx (AuthProvider +
+// useAuth + useAuthActions) - importuj stamtad, nie stad.

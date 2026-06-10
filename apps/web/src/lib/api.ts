@@ -13,7 +13,7 @@
 import type { ScheduleData, WeekSchedule } from '@syncu/types'
 import { getStoredToken, clearToken } from './auth'
 
-const API_BASE: string =
+export const API_BASE: string =
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001'
 
 export type GroupSummary = {
@@ -88,6 +88,52 @@ export function fetchScheduleChanges(groupId: string): Promise<ScheduleChangesRe
   return request<ScheduleChangesResponse>(`/schedule/changes?groupId=${encodeURIComponent(groupId)}`)
 }
 
+/* --- import planu (G-5.6) --- */
+
+export type ConfirmImportBody = {
+  user: {
+    email: string
+    displayName: string
+    university?: string | null
+    fieldOfStudy?: string | null
+    yearOfStudy?: number | null
+  }
+  semester: {
+    name: string
+    academicYear: string
+    term: string
+    startsAt?: string | null
+    endsAt?: string | null
+    isActive?: boolean
+  }
+  source: {
+    kind: string
+    url?: string | null
+    filename?: string | null
+  }
+  section: {
+    id: string
+    label: string
+    yearSemLabel: string
+    groupId: number | string
+    entries: Array<{ time: string; date: string; subject: string }>
+  }
+}
+
+export type ConfirmImportResponse = {
+  courseCount: number
+  classSessionCount: number
+}
+
+/** POST /timetable/import/confirm - persystencja sparsowanego planu w bazie. */
+export function confirmTimetableImport(body: ConfirmImportBody): Promise<ConfirmImportResponse> {
+  return request<ConfirmImportResponse>('/timetable/import/confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
 /* --- kolokwia (G-8 / G-12) --- */
 
 export type ExamRecord = {
@@ -130,5 +176,235 @@ export function createExam(input: CreateExamInput): Promise<CreateExamResponse> 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
+  })
+}
+
+/* --- przedmioty usera --- */
+
+export type CourseSummary = {
+  id: number
+  name: string
+  semesterId: number
+}
+
+/** GET /courses - przedmioty zalogowanego usera (do pickera kolokwiow). */
+export function fetchCourses(): Promise<{ courses: CourseSummary[] }> {
+  return authedRequest<{ courses: CourseSummary[] }>('/courses')
+}
+
+export type CourseSession = {
+  id: number
+  sessionType: string
+  title: string
+  startsAt: string
+  endsAt: string
+  room: string | null
+  lecturerName: string | null
+}
+
+export type CourseDetail = {
+  course: {
+    id: number
+    name: string
+    semesterId: number
+    lecturerName: string | null
+    room: string | null
+  }
+  sessions: CourseSession[]
+  exams: Array<{
+    id: number
+    date: string
+    scope: string | null
+    createdAt: string
+  }>
+}
+
+/** GET /courses/:id - szczegoly przedmiotu (zajecia + kolokwia). 404 jesli nie moj. */
+export function fetchCourseDetail(id: number): Promise<CourseDetail> {
+  return authedRequest<CourseDetail>(`/courses/${id}`)
+}
+
+/* --- wlasne wydarzenia w planie --- */
+
+export type UserEventRecord = {
+  id: number
+  userId: number
+  title: string
+  date: string // YYYY-MM-DD
+  startTime: string // HH:MM
+  endTime: string // HH:MM
+  room: string | null
+  createdAt: string
+}
+
+export function fetchMyEvents(): Promise<{ events: UserEventRecord[] }> {
+  return authedRequest<{ events: UserEventRecord[] }>('/events')
+}
+
+export type CreateEventInput = {
+  title: string
+  date: string
+  startTime: string
+  endTime: string
+  room?: string | null
+}
+
+export function createEvent(input: CreateEventInput): Promise<{ event: UserEventRecord }> {
+  return authedRequest<{ event: UserEventRecord }>('/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+}
+
+export function deleteEvent(id: number): Promise<{ deleted: boolean }> {
+  return authedRequest<{ deleted: boolean }>(`/events/${id}`, { method: 'DELETE' })
+}
+
+export const USER_EVENTS_SECTION_ID = '__user-events__'
+
+/**
+ * Plan grupy + wlasne wydarzenia usera zmergowane jako syntetyczna sekcja.
+ * Dzieki temu Today/Week pokazuja eventy bez zmian w logice renderowania
+ * (obie strony robia flatMap po sections->entries).
+ * Format wpisu dopasowany do planu PK: date "D.MM", time "H.MM-H.MM".
+ */
+export async function fetchScheduleWithMyEvents(groupId: string): Promise<ScheduleData> {
+  const token = getStoredToken()
+  const [schedule, eventsRes] = await Promise.all([
+    fetchGroupSchedule(groupId),
+    token
+      ? fetchMyEvents().catch(() => ({ events: [] as UserEventRecord[] }))
+      : Promise.resolve({ events: [] as UserEventRecord[] }),
+  ])
+
+  if (eventsRes.events.length === 0) return schedule
+
+  const entries = eventsRes.events.map((event) => ({
+    date: isoDateToDDMM(event.date),
+    time: `${colonTimeToDot(event.startTime)}-${colonTimeToDot(event.endTime)}`,
+    subject: event.room ? `${event.title} (${event.room})` : event.title,
+  }))
+
+  return {
+    ...schedule,
+    sections: [
+      ...schedule.sections,
+      {
+        id: USER_EVENTS_SECTION_ID,
+        label: 'Moje wydarzenia',
+        yearSemLabel: '',
+        groupId: '',
+        entries,
+      },
+    ],
+  }
+}
+
+/** "2026-06-07" -> "7.06" (format dat w planie PK: dzien bez zera, miesiac z zerem). */
+function isoDateToDDMM(isoDate: string): string {
+  const [, month = '', day = ''] = isoDate.split('-')
+  return `${Number(day)}.${month}`
+}
+
+/** "09:30" -> "9.30" (format czasu w planie PK: kropka, godzina bez zera). */
+function colonTimeToDot(time: string): string {
+  const [h = '0', m = '00'] = time.split(':')
+  return `${Number(h)}.${m}`
+}
+
+/* --- G-13: grupa (czlonkowie + wspolne kolokwia) --- */
+
+export type GroupMember = {
+  id: number
+  displayName: string
+  fieldOfStudy: string | null
+  yearOfStudy: number | null
+}
+
+export type GroupMembersResponse = {
+  groupId: string
+  members: GroupMember[]
+}
+
+/** GET /groups/members - czlonkowie grupy zalogowanego usera. */
+export function fetchGroupMembers(): Promise<GroupMembersResponse> {
+  return authedRequest<GroupMembersResponse>('/groups/members')
+}
+
+export type GroupExamRecord = ExamRecord & {
+  authorName: string
+}
+
+/** GET /exams?view=group - kolokwia wszystkich czlonkow mojej grupy (z autorem). */
+export function fetchGroupExams(): Promise<{ exams: GroupExamRecord[] }> {
+  return authedRequest<{ exams: GroupExamRecord[] }>('/exams?view=group')
+}
+
+/* --- G-14: materialy grupy --- */
+
+export type MaterialKind = 'notatki' | 'link' | 'zadania' | 'inne'
+
+export type MaterialRecord = {
+  id: number
+  userId: number
+  groupId: string
+  courseName: string | null
+  title: string
+  kind: MaterialKind
+  url: string | null
+  content: string | null
+  fileName: string | null
+  createdAt: string
+  authorName: string
+}
+
+/** Url materialu do <a href>: wgrane pliki (/files/...) servuje API, reszta to linki zewnetrzne. */
+export function materialHref(url: string): string {
+  return url.startsWith('/files/') ? `${API_BASE}${url}` : url
+}
+
+export function fetchMaterials(): Promise<{ groupId: string; materials: MaterialRecord[] }> {
+  return authedRequest<{ groupId: string; materials: MaterialRecord[] }>('/materials')
+}
+
+export type CreateMaterialInput = {
+  title: string
+  kind: MaterialKind
+  url?: string | null
+  content?: string | null
+  courseName?: string | null
+}
+
+export function createMaterial(input: CreateMaterialInput): Promise<{ material: MaterialRecord }> {
+  return authedRequest<{ material: MaterialRecord }>('/materials', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+}
+
+export type UploadMaterialInput = {
+  file: File
+  title?: string
+  kind?: MaterialKind
+  courseName?: string | null
+}
+
+/**
+ * POST /materials/upload - material z plikiem (multipart, max 10 MB).
+ * Content-Type ustawia przegladarka (boundary), wiec nie przechodzi przez
+ * JSON-owy authedRequest helper.
+ */
+export function uploadMaterial(input: UploadMaterialInput): Promise<{ material: MaterialRecord }> {
+  const formData = new FormData()
+  formData.append('file', input.file)
+  if (input.title) formData.append('title', input.title)
+  if (input.kind) formData.append('kind', input.kind)
+  if (input.courseName) formData.append('courseName', input.courseName)
+
+  return authedRequest<{ material: MaterialRecord }>('/materials/upload', {
+    method: 'POST',
+    body: formData,
   })
 }
