@@ -5,7 +5,7 @@ import {
   type ParsedTimetable,
   type ScheduleSection,
 } from '@syncu/core'
-import { Button, Card } from '@syncu/ui'
+import { Button, Card, UploadDropzone } from '@syncu/ui'
 import { confirmTimetableImport } from '../lib/api'
 import { getCurrentUser } from '../lib/auth'
 import { PageShell } from './PageShell'
@@ -292,15 +292,6 @@ function deriveCurrentSemester() {
     term,
     isActive: true,
   }
-}
-
-function Spinner() {
-  return (
-    <svg className="animate-spin size-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
-      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-    </svg>
-  )
 }
 
 function Th({ children }: { children: React.ReactNode }) {

@@ -6,6 +6,7 @@ import {
   type AuthUser,
   updateCurrentUserProfile,
 } from '../lib/auth'
+import { useAuth, useAuthActions } from '../lib/AuthContext'
 import {
   fetchExams,
   fetchGroups,

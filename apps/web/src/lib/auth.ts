@@ -14,8 +14,8 @@
  *                          ->  { user }
  *
  * Token zapisywany w localStorage pod kluczem `syncu.token`. To prosty
- * helper bez kontekstu Reacta - pelny `AuthContext` z reaktywnoscia
- * (rerender Topbara po zalogowaniu itd.) robi Aleks w G-6.7.
+ * helper bez kontekstu Reacta - reaktywny stan auth (useAuth/useAuthActions)
+ * zyje w `lib/AuthContext.tsx` i korzysta z tych funkcji pod spodem.
  */
 
 const API_BASE: string =
@@ -206,32 +206,5 @@ export async function changeCurrentUserPassword(
   })
 }
 
-/* --- React hook --- */
-
-type AuthState =
-  | { kind: 'loading' }
-  | { kind: 'authenticated'; user: AuthUser }
-  | { kind: 'anonymous' }
-
-/**
- * Minimalny hook do odczytu stanu zalogowania. Aleks pozniej zastapi to
- * pelnym AuthContext (Provider + reaktywnosc + cache miedzy komponentami).
- * Na razie kazdy komponent ktory uzywa useAuth robi wlasny fetch /auth/me
- * przy mount - troche redundantne ale wystarczy na 2 strony (Login, Register).
- */
-export function useAuth(): AuthState {
-  const [state, setState] = useState<AuthState>({ kind: 'loading' })
-
-  useEffect(() => {
-    let cancelled = false
-    getCurrentUser().then((user) => {
-      if (cancelled) return
-      setState(user ? { kind: 'authenticated', user } : { kind: 'anonymous' })
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  return state
-}
+// Hook useAuth zostal przeniesiony do lib/AuthContext.tsx (AuthProvider +
+// useAuth + useAuthActions) - importuj stamtad, nie stad.

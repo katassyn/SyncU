@@ -13,7 +13,7 @@ import {
   type MaterialKind,
   type MaterialRecord,
 } from '../lib/api'
-import { useAuth } from '../lib/auth'
+import { useAuth } from '../lib/AuthContext'
 
 /**
  * G-13 + G-14: strona grupy ("Grupy" w nav, route /library).
