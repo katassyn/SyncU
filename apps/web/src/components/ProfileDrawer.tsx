@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { getUserInitial, logoutUser, useAuth } from '../lib/auth';
+import { getUserInitial } from '../lib/auth';
+import { useAuth, useAuthActions } from '../lib/AuthContext';
 
 interface ProfileDrawerProps {
   open: boolean;
@@ -9,11 +10,12 @@ interface ProfileDrawerProps {
 export function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
   const navigate = useNavigate();
   const auth = useAuth();
+  const { logout } = useAuthActions();
   const user = auth.kind === 'authenticated' ? auth.user : null;
 
   async function handleLogout() {
     onClose();
-    await logoutUser();
+    await logout();
     navigate('/login');
   }
   return (

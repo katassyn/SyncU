@@ -103,14 +103,14 @@ export default function ImportPage() {
       title="Import"
       subtitle="Wgraj plan zajec z pliku .xls / .xlsx (format Politechniki Krakowskiej)"
     >
-      {phase.kind === 'idle' && (
-        <DropZone
+      {(phase.kind === 'idle' || phase.kind === 'parsing') && (
+        <UploadDropzone
           dragActive={dragActive}
+          loading={phase.kind === 'parsing'}
+          loadingText="Parsowanie pliku..."
+          acceptLabel="akceptowane: .xls, .xlsx"
           onClick={() => fileInputRef.current?.click()}
-          onDragEnter={(e) => {
-            e.preventDefault()
-            setDragActive(true)
-          }}
+          onDragEnter={(e) => { e.preventDefault(); setDragActive(true) }}
           onDragOver={(e) => e.preventDefault()}
           onDragLeave={() => setDragActive(false)}
           onDrop={onDrop}
@@ -122,14 +122,7 @@ export default function ImportPage() {
             onChange={onInputChange}
             className="hidden"
           />
-        </DropZone>
-      )}
-
-      {phase.kind === 'parsing' && (
-        <div className="flex items-center gap-3 text-muted py-4">
-          <Spinner />
-          <span>Parsowanie pliku...</span>
-        </div>
+        </UploadDropzone>
       )}
 
       {phase.kind === 'error' && (
@@ -162,7 +155,10 @@ export default function ImportPage() {
 
       {phase.kind === 'saving' && (
         <div className="flex items-center gap-3 text-muted py-4">
-          <Spinner />
+          <svg className="animate-spin size-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
+            <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          </svg>
           <span>Zapisywanie...</span>
         </div>
       )}
@@ -179,49 +175,6 @@ export default function ImportPage() {
         </Card>
       )}
     </PageShell>
-  )
-}
-
-/* --- drop zone --- */
-
-function DropZone({
-  dragActive,
-  children,
-  onClick,
-  onDragEnter,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-}: {
-  dragActive: boolean
-  children?: React.ReactNode
-  onClick: () => void
-  onDragEnter: (e: React.DragEvent) => void
-  onDragOver: (e: React.DragEvent) => void
-  onDragLeave: () => void
-  onDrop: (e: React.DragEvent) => void
-}) {
-  return (
-    <div
-      onClick={onClick}
-      onDragEnter={onDragEnter}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-      className={[
-        'border-2 border-dashed rounded-card-lg p-8 sm:p-12 text-center cursor-pointer',
-        'transition-colors duration-150',
-        dragActive
-          ? 'border-primary bg-primary-light'
-          : 'border-border-subtle bg-surface-1 hover:bg-surface-2',
-      ].join(' ')}
-    >
-      <p className="text-h3 text-heading mb-1">
-        Upuść plik tutaj albo kliknij, żeby wybrać
-      </p>
-      <p className="text-muted text-ui">akceptowane: .xls, .xlsx</p>
-      {children}
-    </div>
   )
 }
 

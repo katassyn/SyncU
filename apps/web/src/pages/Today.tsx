@@ -116,6 +116,17 @@ function TodaySessionsList({ state, todayEntries }: { state: ScheduleState; toda
     );
   }
 
+  if (state.kind === 'error') {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+        <p className="text-ui text-muted m-0">Nie udało się pobrać planu zajęć.</p>
+        <NavLink to="/import" className="text-badge font-bold text-primary-nav hover:underline">
+          Zaimportuj plan →
+        </NavLink>
+      </div>
+    );
+  }
+
   if (state.kind === 'loaded') {
     if (todayEntries.length === 0) {
       return (

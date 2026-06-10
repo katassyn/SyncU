@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { getUserInitial, useAuth } from '../lib/auth';
+import { getUserInitial } from '../lib/auth';
+import { useAuth } from '../lib/AuthContext';
 
 interface TopBarProps {
   onProfileClick: () => void;
