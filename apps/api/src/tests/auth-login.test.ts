@@ -37,7 +37,7 @@ function req(path: string, body: unknown) {
 
 const registrationPayload = {
 	email: "login@example.com",
-	password: "VeryStrong123",
+	password: "VeryStrong123!",
 	displayName: "Kamil Gebala",
 	university: "Politechnika Krakowska",
 	fieldOfStudy: "Informatyka",
@@ -77,7 +77,7 @@ describe("POST /auth/login", () => {
 	test("returns 401 for unknown email", async () => {
 		const response = await req("/auth/login", {
 			email: "unknown@example.com",
-			password: "VeryStrong123",
+			password: "VeryStrong123!",
 		});
 
 		expect(response.status).toBe(401);

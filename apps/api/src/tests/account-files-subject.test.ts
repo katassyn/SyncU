@@ -62,11 +62,11 @@ async function login(email: string, password: string) {
 
 async function registerAndLogin(email: string, displayName: string): Promise<string> {
 	const registerResponse = await jsonRequest("POST", "/auth/register", {
-		body: { email, password: "VeryStrong123", displayName },
+		body: { email, password: "VeryStrong123!", displayName },
 	});
 	expect(registerResponse.status).toBe(201);
 
-	const loginResponse = await login(email, "VeryStrong123");
+	const loginResponse = await login(email, "VeryStrong123!");
 	expect(loginResponse.status).toBe(200);
 	const { token } = (await loginResponse.json()) as { token: string };
 	return token;
@@ -86,7 +86,7 @@ describe("PATCH /me/password", () => {
 	test("rejects wrong current password", async () => {
 		const res = await jsonRequest("PATCH", "/me/password", {
 			token: tokenDawid,
-			body: { currentPassword: "ZleHaslo123", newPassword: "NoweHaslo456" },
+			body: { currentPassword: "ZleHaslo123", newPassword: "NoweHaslo456!" },
 		});
 		expect(res.status).toBe(400);
 	});
@@ -94,21 +94,21 @@ describe("PATCH /me/password", () => {
 	test("changes password: old login stops working, new works", async () => {
 		const res = await jsonRequest("PATCH", "/me/password", {
 			token: tokenDawid,
-			body: { currentPassword: "VeryStrong123", newPassword: "NoweHaslo456" },
+			body: { currentPassword: "VeryStrong123!", newPassword: "NoweHaslo456!" },
 		});
 		expect(res.status).toBe(200);
 		expect(await res.json()).toEqual({ changed: true });
 
-		const oldLogin = await login("dawid@example.com", "VeryStrong123");
+		const oldLogin = await login("dawid@example.com", "VeryStrong123!");
 		expect(oldLogin.status).toBe(401);
 
-		const newLogin = await login("dawid@example.com", "NoweHaslo456");
+		const newLogin = await login("dawid@example.com", "NoweHaslo456!");
 		expect(newLogin.status).toBe(200);
 	});
 
 	test("returns 401 without token", async () => {
 		const res = await jsonRequest("PATCH", "/me/password", {
-			body: { currentPassword: "VeryStrong123", newPassword: "NoweHaslo456" },
+			body: { currentPassword: "VeryStrong123!", newPassword: "NoweHaslo456!" },
 		});
 		expect(res.status).toBe(401);
 	});

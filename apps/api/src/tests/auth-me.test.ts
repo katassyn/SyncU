@@ -50,7 +50,7 @@ function get(path: string, token?: string) {
 
 const registrationPayload = {
 	email: "me@example.com",
-	password: "VeryStrong123",
+	password: "VeryStrong123!",
 	displayName: "Kamil Gebala",
 	university: "Politechnika Krakowska",
 	fieldOfStudy: "Informatyka",

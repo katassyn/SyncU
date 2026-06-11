@@ -51,7 +51,7 @@ function get(path: string, token?: string) {
 
 const ownerPayload = {
 	email: "exams-owner@example.com",
-	password: "VeryStrong123",
+	password: "VeryStrong123!",
 	displayName: "Exam Owner",
 	university: "Politechnika Krakowska",
 	fieldOfStudy: "Informatyka",
@@ -60,7 +60,7 @@ const ownerPayload = {
 
 const outsiderPayload = {
 	email: "exams-outsider@example.com",
-	password: "VeryStrong123",
+	password: "VeryStrong123!",
 	displayName: "Exam Outsider",
 	university: "Politechnika Krakowska",
 	fieldOfStudy: "Informatyka",
@@ -69,7 +69,7 @@ const outsiderPayload = {
 
 const groupMemberPayload = {
 	email: "exams-member@example.com",
-	password: "VeryStrong123",
+	password: "VeryStrong123!",
 	displayName: "Exam Member",
 	university: "Politechnika Krakowska",
 	fieldOfStudy: "Informatyka",

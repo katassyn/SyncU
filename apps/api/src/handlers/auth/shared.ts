@@ -35,6 +35,30 @@ export function generateSalt(): string {
 		.join("");
 }
 
+export function validatePasswordStrength(password: string): string | null {
+	if (password.length < 10) {
+		return "Password must be at least 10 characters long.";
+	}
+
+	if (!/[a-z]/.test(password)) {
+		return "Password must include a lowercase letter.";
+	}
+
+	if (!/[A-Z]/.test(password)) {
+		return "Password must include an uppercase letter.";
+	}
+
+	if (!/\d/.test(password)) {
+		return "Password must include a number.";
+	}
+
+	if (!/[^A-Za-z0-9]/.test(password)) {
+		return "Password must include a special character.";
+	}
+
+	return null;
+}
+
 function getJwtSecret(): string {
 	return process.env.JWT_SECRET ?? "syncu-dev-secret";
 }

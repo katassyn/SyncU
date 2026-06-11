@@ -7,6 +7,7 @@ import {
 	getAuthenticatedUser,
 	getCurrentTimestamp,
 	toAuthUser,
+	validatePasswordStrength,
 } from "../auth/shared";
 
 const patchMeBody = t.Object({
@@ -15,12 +16,68 @@ const patchMeBody = t.Object({
 	fieldOfStudy: t.Optional(t.Nullable(t.String({ maxLength: 150 }))),
 	yearOfStudy: t.Optional(t.Nullable(t.Number({ minimum: 1, maximum: 10 }))),
 	groupId: t.Optional(t.Nullable(t.String({ maxLength: 50 }))),
+	currentPassword: t.Optional(t.String({ minLength: 8, maxLength: 128 })),
+	newPassword: t.Optional(t.String({ minLength: 8, maxLength: 128 })),
 });
 
 const changePasswordBody = t.Object({
 	currentPassword: t.String({ minLength: 8, maxLength: 128 }),
 	newPassword: t.String({ minLength: 8, maxLength: 128 }),
 });
+
+async function changePasswordForUser(
+	userId: number,
+	currentPassword: string,
+	newPassword: string,
+	set: { status?: unknown },
+) {
+	const passwordError = validatePasswordStrength(newPassword);
+	if (passwordError) {
+		set.status = 400;
+		return { response: { message: passwordError } };
+	}
+
+	const credential = db
+		.select({
+			id: authCredentials.id,
+			passwordHash: authCredentials.passwordHash,
+			salt: authCredentials.salt,
+		})
+		.from(authCredentials)
+		.where(eq(authCredentials.userId, userId))
+		.get();
+
+	if (!credential) {
+		set.status = 404;
+		return { response: { message: "Credentials not found." } };
+	}
+
+	const isCurrentValid = await Bun.password.verify(
+		`${currentPassword}:${credential.salt}`,
+		credential.passwordHash,
+	);
+
+	if (!isCurrentValid) {
+		set.status = 400;
+		return { response: { message: "Current password is incorrect." } };
+	}
+
+	const newSalt = generateSalt();
+	const newHash = await Bun.password.hash(`${newPassword}:${newSalt}`, {
+		algorithm: "argon2id",
+	});
+
+	db.update(authCredentials)
+		.set({
+			passwordHash: newHash,
+			salt: newSalt,
+			updatedAt: getCurrentTimestamp(),
+		})
+		.where(eq(authCredentials.id, credential.id))
+		.run();
+
+	return { response: null };
+}
 
 export const meRoutes = new Elysia()
 	.patch(
@@ -35,50 +92,13 @@ export const meRoutes = new Elysia()
 				};
 			}
 
-			const credential = db
-				.select({
-					id: authCredentials.id,
-					passwordHash: authCredentials.passwordHash,
-					salt: authCredentials.salt,
-				})
-				.from(authCredentials)
-				.where(eq(authCredentials.userId, currentUser.id))
-				.get();
-
-			if (!credential) {
-				set.status = 404;
-				return {
-					message: "Credentials not found.",
-				};
-			}
-
-			// Ten sam schemat co w /auth/login: hash("haslo:salt")
-			const isCurrentValid = await Bun.password.verify(
-				`${body.currentPassword}:${credential.salt}`,
-				credential.passwordHash,
+			const changeResult = await changePasswordForUser(
+				currentUser.id,
+				body.currentPassword,
+				body.newPassword,
+				set,
 			);
-
-			if (!isCurrentValid) {
-				set.status = 400;
-				return {
-					message: "Obecne hasło jest nieprawidłowe.",
-				};
-			}
-
-			const newSalt = generateSalt();
-			// Ten sam algorytm co przy rejestracji (handlers/auth/index.ts)
-			const newHash = await Bun.password.hash(`${body.newPassword}:${newSalt}`, {
-				algorithm: "argon2id",
-			});
-
-			db.update(authCredentials)
-				.set({
-					passwordHash: newHash,
-					salt: newSalt,
-					updatedAt: getCurrentTimestamp(),
-				})
-				.where(eq(authCredentials.id, credential.id))
-				.run();
+			if (changeResult.response) return changeResult.response;
 
 			return {
 				changed: true,
@@ -105,12 +125,34 @@ export const meRoutes = new Elysia()
 				body.university === undefined &&
 				body.fieldOfStudy === undefined &&
 				body.yearOfStudy === undefined &&
-				body.groupId === undefined
+				body.groupId === undefined &&
+				body.currentPassword === undefined &&
+				body.newPassword === undefined
 			) {
 				set.status = 400;
 				return {
 					message: "At least one profile field must be provided.",
 				};
+			}
+
+			if (
+				(body.currentPassword === undefined && body.newPassword !== undefined) ||
+				(body.currentPassword !== undefined && body.newPassword === undefined)
+			) {
+				set.status = 400;
+				return {
+					message: "Both currentPassword and newPassword must be provided to change password.",
+				};
+			}
+
+			if (body.currentPassword !== undefined && body.newPassword !== undefined) {
+				const changeResult = await changePasswordForUser(
+					currentUser.id,
+					body.currentPassword,
+					body.newPassword,
+					set,
+				);
+				if (changeResult.response) return changeResult.response;
 			}
 
 			const now = getCurrentTimestamp();
