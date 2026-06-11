@@ -344,56 +344,37 @@ export function fetchGroupExams(): Promise<{ exams: GroupExamRecord[] }> {
 
 /* --- G-14: materialy grupy --- */
 
-export type MaterialKind = 'notatki' | 'link' | 'zadania' | 'inne'
-
 export type MaterialRecord = {
   id: number
-  userId: number
   groupId: string
-  courseName: string | null
+  courseName: string
   title: string
-  kind: MaterialKind
-  url: string | null
-  content: string | null
-  fileName: string | null
+  fileUrl: string
+  fileSize: number
+  mimeType: string
+  uploadedBy: number
   createdAt: string
   authorName: string
 }
 
-/** Url materialu do <a href>: wgrane pliki (/files/...) servuje API, reszta to linki zewnetrzne. */
-export function materialHref(url: string): string {
-  return url.startsWith('/files/') ? `${API_BASE}${url}` : url
+/** Url materialu do <a href>: wgrane pliki (/files/...) servuje API. */
+export function materialHref(fileUrl: string): string {
+  return fileUrl.startsWith('/files/') ? `${API_BASE}${fileUrl}` : fileUrl
 }
 
-export function fetchMaterials(): Promise<{ groupId: string; materials: MaterialRecord[] }> {
-  return authedRequest<{ groupId: string; materials: MaterialRecord[] }>('/materials')
-}
-
-export type CreateMaterialInput = {
-  title: string
-  kind: MaterialKind
-  url?: string | null
-  content?: string | null
-  courseName?: string | null
-}
-
-export function createMaterial(input: CreateMaterialInput): Promise<{ material: MaterialRecord }> {
-  return authedRequest<{ material: MaterialRecord }>('/materials', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  })
+export function fetchMaterials(course?: string): Promise<{ groupId: string; materials: MaterialRecord[] }> {
+  const query = course ? `?course=${encodeURIComponent(course)}` : ''
+  return authedRequest<{ groupId: string; materials: MaterialRecord[] }>(`/materials${query}`)
 }
 
 export type UploadMaterialInput = {
   file: File
   title?: string
-  kind?: MaterialKind
-  courseName?: string | null
+  courseName: string
 }
 
 /**
- * POST /materials/upload - material z plikiem (multipart, max 10 MB).
+ * POST /materials - material z plikiem (multipart, max 10 MB).
  * Content-Type ustawia przegladarka (boundary), wiec nie przechodzi przez
  * JSON-owy authedRequest helper.
  */
@@ -401,11 +382,14 @@ export function uploadMaterial(input: UploadMaterialInput): Promise<{ material: 
   const formData = new FormData()
   formData.append('file', input.file)
   if (input.title) formData.append('title', input.title)
-  if (input.kind) formData.append('kind', input.kind)
-  if (input.courseName) formData.append('courseName', input.courseName)
+  formData.append('courseName', input.courseName)
 
-  return authedRequest<{ material: MaterialRecord }>('/materials/upload', {
+  return authedRequest<{ material: MaterialRecord }>('/materials', {
     method: 'POST',
     body: formData,
   })
+}
+
+export function deleteMaterial(id: number): Promise<{ deleted: boolean }> {
+  return authedRequest<{ deleted: boolean }>(`/materials/${id}`, { method: 'DELETE' })
 }

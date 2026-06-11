@@ -188,7 +188,7 @@ describe("GET /courses/:id", () => {
 	});
 });
 
-describe("POST /materials/upload + GET /files/:name", () => {
+describe("POST /materials + GET /files/:name", () => {
 	test("uploads a file and serves it back", async () => {
 		// Ewa musi miec grupe, zeby dodawac materialy. Grupa unikalna dla tego
 		// pliku - testy wspoldziela proces (i baze), wiec "32_1" z
@@ -206,11 +206,10 @@ describe("POST /materials/upload + GET /files/:name", () => {
 			new File([fileBytes], "notatki z wykładu.pdf", { type: "application/pdf" }),
 		);
 		formData.append("title", "Notatki PDF");
-		formData.append("kind", "notatki");
 		formData.append("courseName", "Algorytmy");
 
 		const uploadRes = await app.handle(
-			new Request("http://localhost/materials/upload", {
+			new Request("http://localhost/materials", {
 				method: "POST",
 				headers: { authorization: `Bearer ${tokenEwa}` },
 				body: formData,
@@ -218,14 +217,15 @@ describe("POST /materials/upload + GET /files/:name", () => {
 		);
 		expect(uploadRes.status).toBe(201);
 		const { material } = (await uploadRes.json()) as {
-			material: { url: string; fileName: string; title: string };
+			material: { fileUrl: string; fileSize: number; mimeType: string; title: string };
 		};
 		expect(material.title).toBe("Notatki PDF");
-		expect(material.fileName).toBe("notatki z wykładu.pdf");
-		expect(material.url).toMatch(/^\/files\/[0-9a-f-]{36}\.pdf$/);
+		expect(material.fileUrl).toMatch(/^\/files\/[0-9a-f-]{36}\.pdf$/);
+		expect(material.fileSize).toBe(fileBytes.byteLength);
+		expect(material.mimeType).toBe("application/pdf");
 
 		// Serwowanie pliku (bez tokenu - <a href> nie wysyla Bearera)
-		const fileRes = await app.handle(new Request(`http://localhost${material.url}`));
+		const fileRes = await app.handle(new Request(`http://localhost${material.fileUrl}`));
 		expect(fileRes.status).toBe(200);
 		expect(fileRes.headers.get("content-type")).toBe("application/pdf");
 		const served = new Uint8Array(await fileRes.arrayBuffer());
@@ -237,7 +237,7 @@ describe("POST /materials/upload + GET /files/:name", () => {
 		formData.append("file", new File([new Uint8Array([1, 2, 3])], "wirus.exe"));
 
 		const uploadRes = await app.handle(
-			new Request("http://localhost/materials/upload", {
+			new Request("http://localhost/materials", {
 				method: "POST",
 				headers: { authorization: `Bearer ${tokenEwa}` },
 				body: formData,

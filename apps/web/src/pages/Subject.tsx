@@ -42,7 +42,7 @@ export default function Subject() {
         if (cancelled) return
         const courseNameNormalized = detail.course.name.trim().toLowerCase()
         const materials = materialsRes.materials.filter(
-          (m) => m.courseName?.trim().toLowerCase() === courseNameNormalized,
+          (m) => m.courseName.trim().toLowerCase() === courseNameNormalized,
         )
         setState({ kind: 'loaded', detail, materials })
       })
@@ -177,20 +177,14 @@ export default function Subject() {
                     key={material.id}
                     className="border-l-[3px] border-primary pl-3 py-1 flex flex-col gap-0.5"
                   >
-                    {material.url ? (
-                      <a
-                        href={materialHref(material.url)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-ui font-semibold text-primary-nav hover:underline leading-snug break-words"
-                      >
-                        {material.title} {material.fileName ? '📎' : '↗'}
-                      </a>
-                    ) : (
-                      <p className="text-ui font-semibold text-heading m-0 leading-snug">
-                        {material.title}
-                      </p>
-                    )}
+                    <a
+                      href={materialHref(material.fileUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-ui font-semibold text-primary-nav hover:underline leading-snug break-words"
+                    >
+                      {material.title} ({(material.fileSize / 1024 / 1024).toFixed(1)} MB)
+                    </a>
                     <p className="text-badge text-muted m-0">{material.authorName}</p>
                   </div>
                 ))}

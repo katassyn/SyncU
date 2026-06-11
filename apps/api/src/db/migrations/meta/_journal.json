@@ -71,6 +71,13 @@
       "when": 1781198052543,
       "tag": "0009_group_exams",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1781201230541,
+      "tag": "0010_materials_upload_contract",
+      "breakpoints": true
     }
   ]
 }
