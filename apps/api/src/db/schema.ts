@@ -178,21 +178,21 @@ export const materials = sqliteTable(
 	"materials",
 	{
 		id: integer("id").primaryKey({ autoIncrement: true }),
-		userId: integer("user_id")
+		groupId: text("group_id").notNull(),
+		courseName: text("course_name").notNull(),
+		title: text("title").notNull(),
+		fileUrl: text("file_url").notNull(),
+		fileSize: integer("file_size").notNull(),
+		mimeType: text("mime_type").notNull(),
+		uploadedBy: integer("uploaded_by")
 			.notNull()
 			.references(() => users.id),
-		groupId: text("group_id").notNull(),
-		courseName: text("course_name"),
-		title: text("title").notNull(),
-		kind: text("kind").notNull(),
-		url: text("url"),
-		content: text("content"),
-		fileName: text("file_name"),
 		createdAt: text("created_at").notNull(),
 	},
 	(table) => ({
-		userIdIdx: index("idx_materials_user_id").on(table.userId),
 		groupIdIdx: index("idx_materials_group_id").on(table.groupId),
+		courseNameIdx: index("idx_materials_course_name").on(table.courseName),
+		uploadedByIdx: index("idx_materials_uploaded_by").on(table.uploadedBy),
 	}),
 );
 
