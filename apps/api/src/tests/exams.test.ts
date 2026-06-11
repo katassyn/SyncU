@@ -67,13 +67,29 @@ const outsiderPayload = {
 	yearOfStudy: 3,
 };
 
+const groupMemberPayload = {
+	email: "exams-member@example.com",
+	password: "VeryStrong123",
+	displayName: "Exam Member",
+	university: "Politechnika Krakowska",
+	fieldOfStudy: "Informatyka",
+	yearOfStudy: 2,
+};
+
 let ownerToken = "";
+let groupMemberToken = "";
+let ownerUserId = 0;
+let groupMemberUserId = 0;
 let ownerCourseId = 0;
+let groupMemberCourseId = 0;
 let outsiderCourseId = 0;
 
 beforeAll(async () => {
 	const ownerRegister = await post("/auth/register", ownerPayload);
 	expect(ownerRegister.status).toBe(201);
+
+	const groupMemberRegister = await post("/auth/register", groupMemberPayload);
+	expect(groupMemberRegister.status).toBe(201);
 
 	const outsiderRegister = await post("/auth/register", outsiderPayload);
 	expect(outsiderRegister.status).toBe(201);
@@ -85,22 +101,54 @@ beforeAll(async () => {
 	expect(ownerLogin.status).toBe(200);
 	ownerToken = ((await ownerLogin.json()) as { token: string }).token;
 
+	const groupMemberLogin = await post("/auth/login", {
+		email: groupMemberPayload.email,
+		password: groupMemberPayload.password,
+	});
+	expect(groupMemberLogin.status).toBe(200);
+	groupMemberToken = ((await groupMemberLogin.json()) as { token: string }).token;
+
 	const ownerUser = db.select({ id: users.id }).from(users).where(eq(users.email, ownerPayload.email)).get();
+	const groupMemberUser = db
+		.select({ id: users.id })
+		.from(users)
+		.where(eq(users.email, groupMemberPayload.email))
+		.get();
 	const outsiderUser = db
 		.select({ id: users.id })
 		.from(users)
 		.where(eq(users.email, outsiderPayload.email))
 		.get();
 
-	if (!ownerUser || !outsiderUser) {
+	if (!ownerUser || !groupMemberUser || !outsiderUser) {
 		throw new Error("Failed to resolve seeded users for exams tests.");
 	}
+
+	ownerUserId = ownerUser.id;
+	groupMemberUserId = groupMemberUser.id;
+
+	db.update(users).set({ groupId: "32_1" }).where(eq(users.id, ownerUser.id)).run();
+	db.update(users).set({ groupId: "32_1" }).where(eq(users.id, groupMemberUser.id)).run();
+	db.update(users).set({ groupId: "99_1" }).where(eq(users.id, outsiderUser.id)).run();
 
 	const now = new Date().toISOString();
 	const ownerSemester = db
 		.insert(semesters)
 		.values({
 			userId: ownerUser.id,
+			name: "Semestr 4",
+			academicYear: "2026/2027",
+			term: "winter",
+			isActive: 1,
+			createdAt: now,
+			updatedAt: now,
+		})
+		.returning({ id: semesters.id })
+		.get();
+	const groupMemberSemester = db
+		.insert(semesters)
+		.values({
+			userId: groupMemberUser.id,
 			name: "Semestr 4",
 			academicYear: "2026/2027",
 			term: "winter",
@@ -134,6 +182,16 @@ beforeAll(async () => {
 		})
 		.returning({ id: courses.id })
 		.get().id;
+	groupMemberCourseId = db
+		.insert(courses)
+		.values({
+			semesterId: groupMemberSemester.id,
+			name: "Analiza Matematyczna",
+			createdAt: now,
+			updatedAt: now,
+		})
+		.returning({ id: courses.id })
+		.get().id;
 	outsiderCourseId = db
 		.insert(courses)
 		.values({
@@ -162,12 +220,16 @@ describe("POST /exams", () => {
 
 		const body = (await response.json()) as {
 			exam: {
+				groupId: string;
+				createdBy: number;
 				courseId: number;
 				courseName: string;
 				scope: string | null;
 			};
 		};
 
+		expect(body.exam.groupId).toBe("32_1");
+		expect(body.exam.createdBy).toBe(ownerUserId);
 		expect(body.exam.courseId).toBe(ownerCourseId);
 		expect(body.exam.courseName).toBe("Bazy Danych");
 		expect(body.exam.scope).toBe("Rozdzialy 1-5 i SQL joins");
@@ -203,7 +265,7 @@ describe("POST /exams", () => {
 });
 
 describe("GET /exams", () => {
-	test("returns current user exams ordered by date", async () => {
+	test("returns current group exams ordered by date", async () => {
 		const secondCreate = await post(
 			"/exams",
 			{
@@ -215,22 +277,43 @@ describe("GET /exams", () => {
 		);
 		expect(secondCreate.status).toBe(201);
 
+		const groupMemberCreate = await post(
+			"/exams",
+			{
+				courseId: groupMemberCourseId,
+				date: "2026-06-12T12:00:00.000Z",
+				scope: "Granice i pochodne",
+			},
+			groupMemberToken,
+		);
+		expect(groupMemberCreate.status).toBe(201);
+
 		const response = await get("/exams", ownerToken);
 		expect(response.status).toBe(200);
 
 		const body = (await response.json()) as {
 			exams: Array<{
+				groupId: string;
+				createdBy: number;
 				courseId: number;
 				courseName: string;
 				date: string;
+				authorName: string;
 			}>;
 		};
 
-		expect(body.exams).toHaveLength(2);
+		expect(body.exams).toHaveLength(3);
+		expect(body.exams[0].groupId).toBe("32_1");
+		expect(body.exams[0].createdBy).toBe(ownerUserId);
 		expect(body.exams[0].courseId).toBe(ownerCourseId);
 		expect(body.exams[0].courseName).toBe("Bazy Danych");
 		expect(body.exams[0].date).toBe("2026-06-10T08:00:00.000Z");
-		expect(body.exams[1].date).toBe("2026-06-15T10:00:00.000Z");
+		expect(body.exams[1].createdBy).toBe(groupMemberUserId);
+		expect(body.exams[1].courseId).toBe(groupMemberCourseId);
+		expect(body.exams[1].courseName).toBe("Analiza Matematyczna");
+		expect(body.exams[1].authorName).toBe(groupMemberPayload.displayName);
+		expect(body.exams[1].date).toBe("2026-06-12T12:00:00.000Z");
+		expect(body.exams[2].date).toBe("2026-06-15T10:00:00.000Z");
 	});
 
 	test("returns 401 when authorization header is missing", async () => {
