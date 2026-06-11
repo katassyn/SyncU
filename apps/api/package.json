@@ -10,6 +10,7 @@
 		"build": "bun build src/index.ts --target bun --outdir dist",
 		"db:generate": "drizzle-kit generate --config=drizzle.config.ts",
 		"db:migrate": "bun run src/db/migrate.ts",
+		"db:seed:demo": "bun run src/db/seed-demo.ts",
 		"db:studio": "drizzle-kit studio --config=drizzle.config.ts",
 		"test": "bun test",
 		"test:e2e": "bun test --pattern '*.e2e.ts'",

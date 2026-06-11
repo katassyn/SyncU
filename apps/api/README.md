@@ -22,3 +22,21 @@ bun run db:generate
 bun run db:migrate
 bun run db:studio
 ```
+
+## Demo seed
+
+```bash
+cd apps/api
+bun run db:seed:demo
+```
+
+Seed jest idempotentny dla grupy `DEMO_32_1`: odtwarza demo userow, kursy,
+zajecia, kolokwia, materialy plikowe, wydarzenia i przykladowe dane planu.
+
+Konta demo:
+
+- `demo.anna@syncu.test`
+- `demo.bartek@syncu.test`
+- `demo.celina@syncu.test`
+
+Haslo dla wszystkich: `DemoStrong123!`
