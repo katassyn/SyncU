@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Badge, Button, ExamCard, Select } from '@syncu/ui'
+import { Badge, Button, ExamCard } from '@syncu/ui'
 import {
-  createMaterial,
   fetchGroupExams,
   fetchGroupMembers,
   fetchMaterials,
@@ -10,7 +9,6 @@ import {
   uploadMaterial,
   type GroupExamRecord,
   type GroupMember,
-  type MaterialKind,
   type MaterialRecord,
 } from '../lib/api'
 import { useAuth } from '../lib/AuthContext'
@@ -34,13 +32,6 @@ type State =
   | { kind: 'no-group' }
   | { kind: 'error' }
   | { kind: 'loaded'; data: GroupData }
-
-const KIND_LABEL: Record<MaterialKind, string> = {
-  notatki: 'Notatki',
-  link: 'Link',
-  zadania: 'Zadania',
-  inne: 'Inne',
-}
 
 export default function Library() {
   const auth = useAuth()
@@ -221,8 +212,6 @@ function MaterialsCard({
 }) {
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
-  const [kind, setKind] = useState<MaterialKind>('notatki')
-  const [url, setUrl] = useState('')
   const [courseName, setCourseName] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
@@ -230,39 +219,33 @@ function MaterialsCard({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!title.trim() && !file) {
-      setError('Podaj tytuł materiału albo wybierz plik.')
+    if (!file) {
+      setError('Wybierz plik materialu.')
       return
     }
-    if (file && file.size > 10 * 1024 * 1024) {
-      setError('Plik może mieć maksymalnie 10 MB.')
+    if (!courseName.trim()) {
+      setError('Podaj nazwe przedmiotu.')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Plik moze miec maksymalnie 10 MB.')
       return
     }
     setSaving(true)
     setError(null)
     try {
-      // Z plikiem -> multipart /materials/upload; bez pliku -> JSON /materials
-      const res = file
-        ? await uploadMaterial({
-            file,
-            title: title.trim() || undefined,
-            kind,
-            courseName: courseName.trim() || null,
-          })
-        : await createMaterial({
-            title: title.trim(),
-            kind,
-            url: url.trim() || null,
-            courseName: courseName.trim() || null,
-          })
+      const res = await uploadMaterial({
+        file,
+        title: title.trim() || undefined,
+        courseName: courseName.trim(),
+      })
       onCreated(res.material)
       setTitle('')
-      setUrl('')
       setCourseName('')
       setFile(null)
       setShowForm(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nie udało się dodać materiału.')
+      setError(err instanceof Error ? err.message : 'Nie udalo sie dodac materialu.')
     } finally {
       setSaving(false)
     }
@@ -287,29 +270,22 @@ function MaterialsCard({
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Tytuł (np. Notatki z wykładu 3)"
+            placeholder="Tytuł materiału"
             maxLength={200}
             disabled={saving}
             className="w-full bg-surface-1 rounded-pill px-4 py-2.5 text-ui text-heading placeholder:text-muted border border-transparent focus:outline-none focus:border-primary focus:bg-white transition-colors"
           />
-          <Select
-            id="material-kind"
-            value={kind}
-            onChange={(e) => setKind(e.target.value as MaterialKind)}
-            disabled={saving}
-            options={Object.entries(KIND_LABEL).map(([value, label]) => ({ value, label }))}
-          />
           <input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="Link (np. Google Drive, opcjonalnie)"
-            maxLength={2000}
-            disabled={saving || !!file}
-            className="w-full bg-surface-1 rounded-pill px-4 py-2.5 text-ui text-heading placeholder:text-muted border border-transparent focus:outline-none focus:border-primary focus:bg-white transition-colors disabled:opacity-50"
+            value={courseName}
+            onChange={(e) => setCourseName(e.target.value)}
+            placeholder="Przedmiot"
+            maxLength={200}
+            disabled={saving}
+            className="w-full bg-surface-1 rounded-pill px-4 py-2.5 text-ui text-heading placeholder:text-muted border border-transparent focus:outline-none focus:border-primary focus:bg-white transition-colors"
           />
           <label className="flex flex-col gap-1.5">
             <span className="text-caption font-bold text-body tracking-label uppercase">
-              Albo wgraj plik (max 10 MB)
+              Plik (max 10 MB)
             </span>
             <input
               type="file"
@@ -324,14 +300,6 @@ function MaterialsCard({
               </span>
             )}
           </label>
-          <input
-            value={courseName}
-            onChange={(e) => setCourseName(e.target.value)}
-            placeholder="Przedmiot (opcjonalnie)"
-            maxLength={200}
-            disabled={saving}
-            className="w-full bg-surface-1 rounded-pill px-4 py-2.5 text-ui text-heading placeholder:text-muted border border-transparent focus:outline-none focus:border-primary focus:bg-white transition-colors"
-          />
           {error && <p className="text-ui text-danger m-0">{error}</p>}
           <Button type="submit" variant="primary" size="sm" disabled={saving}>
             {saving ? 'Zapisywanie...' : 'Zapisz materiał'}
@@ -341,7 +309,7 @@ function MaterialsCard({
 
       {materials.length === 0 && !showForm && (
         <p className="text-ui text-muted m-0">
-          Brak materiałów. Podziel się pierwszymi notatkami ze swoją grupą.
+          Brak materiałów. Podziel się pierwszym plikiem ze swoją grupą.
         </p>
       )}
 
@@ -352,33 +320,23 @@ function MaterialsCard({
             className="border-l-[3px] border-primary pl-3 py-1.5 flex flex-col gap-1"
           >
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="default">{KIND_LABEL[material.kind] ?? material.kind}</Badge>
-              {material.courseName && (
-                <span className="text-badge text-muted uppercase tracking-badge font-bold">
-                  {material.courseName}
-                </span>
-              )}
+              <Badge variant="default">
+                {material.mimeType.split('/')[1]?.toUpperCase() ?? 'PLIK'}
+              </Badge>
+              <span className="text-badge text-muted uppercase tracking-badge font-bold">
+                {material.courseName}
+              </span>
             </div>
-            {material.url ? (
-              <a
-                href={materialHref(material.url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-ui font-semibold text-primary-nav hover:underline m-0 leading-snug break-words"
-              >
-                {material.title} {material.fileName ? '📎' : '↗'}
-              </a>
-            ) : (
-              <p className="text-ui font-semibold text-heading m-0 leading-snug">{material.title}</p>
-            )}
-            {material.fileName && material.fileName !== material.title && (
-              <p className="text-badge text-muted m-0 break-words">{material.fileName}</p>
-            )}
-            {material.content && (
-              <p className="text-caption text-muted m-0 leading-snug">{material.content}</p>
-            )}
+            <a
+              href={materialHref(material.fileUrl)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-ui font-semibold text-primary-nav hover:underline m-0 leading-snug break-words"
+            >
+              {material.title} ({(material.fileSize / 1024 / 1024).toFixed(1)} MB)
+            </a>
             <p className="text-badge text-muted m-0">
-              {currentUserId !== null && material.userId === currentUserId
+              {currentUserId !== null && material.uploadedBy === currentUserId
                 ? 'Ty'
                 : material.authorName}
               {' · '}
