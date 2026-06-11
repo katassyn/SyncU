@@ -9,7 +9,12 @@ import {
 	getCurrentUnixTimestamp,
 	signJwt,
 	toAuthUser,
+	validatePasswordStrength,
 } from "./shared";
+
+const REGISTER_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const REGISTER_RATE_LIMIT_MAX_ATTEMPTS = 5;
+const registerAttemptsByIp = new Map<string, number[]>();
 
 const registerBody = t.Object({
 	email: t.String({ format: "email", maxLength: 255 }),
@@ -25,10 +30,47 @@ const loginBody = t.Object({
 	password: t.String({ minLength: 8, maxLength: 128 }),
 });
 
+function getHeaderValue(headers: Record<string, string | undefined>, name: string): string | undefined {
+	return headers[name] ?? headers[name.toLowerCase()];
+}
+
+function getClientIp(headers: Record<string, string | undefined>): string {
+	return (
+		getHeaderValue(headers, "x-forwarded-for")?.split(",")[0]?.trim() ||
+		getHeaderValue(headers, "x-real-ip")?.trim() ||
+		`unknown:${process.env.DB_PATH ?? "default"}`
+	);
+}
+
+function isRegisterRateLimited(ip: string, now = Date.now()): boolean {
+	const recentAttempts = (registerAttemptsByIp.get(ip) ?? []).filter(
+		(timestamp) => now - timestamp < REGISTER_RATE_LIMIT_WINDOW_MS,
+	);
+	recentAttempts.push(now);
+	registerAttemptsByIp.set(ip, recentAttempts);
+
+	return recentAttempts.length > REGISTER_RATE_LIMIT_MAX_ATTEMPTS;
+}
+
 export const authRoutes = new Elysia({ prefix: "/auth" })
 	.post(
 	"/register",
-	async ({ body, set }) => {
+	async ({ body, headers, set }) => {
+		if (isRegisterRateLimited(getClientIp(headers))) {
+			set.status = 429;
+			return {
+				message: "Too many registration attempts. Please try again in a minute.",
+			};
+		}
+
+		const passwordError = validatePasswordStrength(body.password);
+		if (passwordError) {
+			set.status = 400;
+			return {
+				message: passwordError,
+			};
+		}
+
 		const existingCredential = db
 			.select({ id: authCredentials.id })
 			.from(authCredentials)
