@@ -73,11 +73,14 @@ const tokenA = await registerAndLogin("anna@example.com", "Anna Kowalska");
 const tokenB = await registerAndLogin("bartek@example.com", "Bartek Nowak");
 const tokenC = await registerAndLogin("celina@example.com", "Celina Inna");
 
-// Anna i Bartek w grupie 32_1, Celina w innej grupie 21_2.
+const sharedGroupId = "group-sharing-main";
+const otherGroupId = "group-sharing-other";
+
+// Anna i Bartek w jednej grupie, Celina w innej grupie.
 for (const [token, groupId] of [
-	[tokenA, "32_1"],
-	[tokenB, "32_1"],
-	[tokenC, "21_2"],
+	[tokenA, sharedGroupId],
+	[tokenB, sharedGroupId],
+	[tokenC, otherGroupId],
 ] as const) {
 	const res = await request("PATCH", "/me", { body: { groupId }, token });
 	expect(res.status).toBe(200);
@@ -193,7 +196,7 @@ describe("GET /groups/members", () => {
 			groupId: string;
 			members: Array<{ displayName: string }>;
 		};
-		expect(body.groupId).toBe("32_1");
+		expect(body.groupId).toBe(sharedGroupId);
 		const names = body.members.map((m) => m.displayName);
 		expect(names).toContain("Anna Kowalska");
 		expect(names).toContain("Bartek Nowak");
@@ -207,8 +210,8 @@ describe("GET /groups/members", () => {
 	});
 });
 
-describe("GET /exams?view=group", () => {
-	test("group view returns exams of all group members with author name", async () => {
+describe("GET /exams", () => {
+	test("returns exams of all group members with author name", async () => {
 		const createRes = await request("POST", "/exams", {
 			token: tokenA,
 			body: {
@@ -220,7 +223,7 @@ describe("GET /exams?view=group", () => {
 		expect(createRes.status).toBe(201);
 
 		// Bartek (ta sama grupa) widzi kolokwium Anny z jej nazwiskiem
-		const groupRes = await request("GET", "/exams?view=group", { token: tokenB });
+		const groupRes = await request("GET", "/exams", { token: tokenB });
 		expect(groupRes.status).toBe(200);
 		const groupBody = (await groupRes.json()) as {
 			exams: Array<{ courseName: string; authorName: string }>;
@@ -229,13 +232,8 @@ describe("GET /exams?view=group", () => {
 		expect(groupBody.exams[0].courseName).toBe("Fizyka");
 		expect(groupBody.exams[0].authorName).toBe("Anna Kowalska");
 
-		// Domyslny widok Bartka (bez query) - pusty, bo to nie jego kolokwium
-		const ownRes = await request("GET", "/exams", { token: tokenB });
-		const ownBody = (await ownRes.json()) as { exams: unknown[] };
-		expect(ownBody.exams).toHaveLength(0);
-
 		// Celina (inna grupa) nie widzi kolokwium Anny
-		const otherRes = await request("GET", "/exams?view=group", { token: tokenC });
+		const otherRes = await request("GET", "/exams", { token: tokenC });
 		const otherBody = (await otherRes.json()) as { exams: unknown[] };
 		expect(otherBody.exams).toHaveLength(0);
 	});
@@ -263,7 +261,7 @@ describe("/materials", () => {
 		expect(bodyB.materials[0].title).toBe("Notatki z wykladu 1");
 		expect(bodyB.materials[0].authorName).toBe("Anna Kowalska");
 
-		// Celina (inna grupa) nie widzi materialow grupy 32_1
+		// Celina (inna grupa) nie widzi materialow grupy Anny i Bartka.
 		const listResC = await request("GET", "/materials", { token: tokenC });
 		const bodyC = (await listResC.json()) as { materials: unknown[] };
 		expect(bodyC.materials).toHaveLength(0);

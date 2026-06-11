@@ -119,6 +119,12 @@ describe("GET /courses/:id", () => {
 		const ewaId = await getUserId(tokenEwa);
 		const now = new Date().toISOString();
 
+		const groupRes = await jsonRequest("PATCH", "/me", {
+			token: tokenEwa,
+			body: { groupId: "77_9" },
+		});
+		expect(groupRes.status).toBe(200);
+
 		const semester = db
 			.insert(semesters)
 			.values({

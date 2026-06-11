@@ -91,7 +91,7 @@ export const coursesRoutes = new Elysia()
 					createdAt: exams.createdAt,
 				})
 				.from(exams)
-				.where(and(eq(exams.courseId, course.id), eq(exams.userId, currentUser.id)))
+				.where(and(eq(exams.courseId, course.id), eq(exams.createdBy, currentUser.id)))
 				.orderBy(asc(exams.date), asc(exams.id))
 				.all();
 

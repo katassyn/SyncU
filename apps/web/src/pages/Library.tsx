@@ -18,7 +18,7 @@ import { useAuth } from '../lib/AuthContext'
 /**
  * G-13 + G-14: strona grupy ("Grupy" w nav, route /library).
  *  - czlonkowie mojej grupy (GET /groups/members)
- *  - wspolne kolokwia grupy z autorem (GET /exams?view=group)
+ *  - wspolne kolokwia grupy z autorem (GET /exams)
  *  - materialy grupy + dodawanie (GET/POST /materials)
  */
 
@@ -175,7 +175,7 @@ export default function Library() {
                     <p className="text-badge text-muted m-0 mt-1 pl-3">
                       Dodane przez:{' '}
                       <span className="font-bold">
-                        {user && exam.userId === user.id ? 'Ciebie' : exam.authorName}
+                        {user && exam.createdBy === user.id ? 'Ciebie' : exam.authorName}
                       </span>
                     </p>
                   </div>

@@ -138,7 +138,8 @@ export function confirmTimetableImport(body: ConfirmImportBody): Promise<Confirm
 
 export type ExamRecord = {
   id: number
-  userId: number
+  groupId: string
+  createdBy: number
   courseId: number
   courseName: string
   date: string // ISO datetime
@@ -150,7 +151,7 @@ export type ExamsResponse = {
   exams: ExamRecord[]
 }
 
-/** GET /exams - kolokwia zalogowanego usera (wymaga tokenu). */
+/** GET /exams - kolokwia grupy zalogowanego usera (wymaga tokenu). */
 export function fetchExams(): Promise<ExamsResponse> {
   return authedRequest<ExamsResponse>('/exams')
 }
@@ -336,9 +337,9 @@ export type GroupExamRecord = ExamRecord & {
   authorName: string
 }
 
-/** GET /exams?view=group - kolokwia wszystkich czlonkow mojej grupy (z autorem). */
+/** GET /exams - kolokwia wszystkich czlonkow mojej grupy (z autorem). */
 export function fetchGroupExams(): Promise<{ exams: GroupExamRecord[] }> {
-  return authedRequest<{ exams: GroupExamRecord[] }>('/exams?view=group')
+  return authedRequest<{ exams: GroupExamRecord[] }>('/exams')
 }
 
 /* --- G-14: materialy grupy --- */

@@ -135,7 +135,8 @@ export const exams = sqliteTable(
 	"exams",
 	{
 		id: integer("id").primaryKey({ autoIncrement: true }),
-		userId: integer("user_id")
+		groupId: text("group_id").notNull(),
+		createdBy: integer("created_by")
 			.notNull()
 			.references(() => users.id),
 		courseId: integer("course_id")
@@ -146,7 +147,8 @@ export const exams = sqliteTable(
 		createdAt: text("created_at").notNull(),
 	},
 	(table) => ({
-		userIdIdx: index("idx_exams_user_id").on(table.userId),
+		groupIdIdx: index("idx_exams_group_id").on(table.groupId),
+		createdByIdx: index("idx_exams_created_by").on(table.createdBy),
 		courseIdIdx: index("idx_exams_course_id").on(table.courseId),
 		dateIdx: index("idx_exams_date").on(table.date),
 	}),
