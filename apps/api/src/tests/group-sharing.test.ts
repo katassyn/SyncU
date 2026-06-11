@@ -55,6 +55,16 @@ function request(
 	);
 }
 
+function multipartRequest(path: string, formData: FormData, token?: string) {
+	return app.handle(
+		new Request(`http://localhost${path}`, {
+			method: "POST",
+			headers: token ? { authorization: `Bearer ${token}` } : undefined,
+			body: formData,
+		}),
+	);
+}
+
 async function registerAndLogin(email: string, displayName: string): Promise<string> {
 	const registerResponse = await request("POST", "/auth/register", {
 		body: { email, password: "VeryStrong123", displayName },
@@ -240,38 +250,76 @@ describe("GET /exams", () => {
 });
 
 describe("/materials", () => {
-	test("group members share materials with author attribution", async () => {
-		const createRes = await request("POST", "/materials", {
-			token: tokenA,
-			body: {
-				title: "Notatki z wykladu 1",
-				kind: "notatki",
-				url: "https://example.com/notatki.pdf",
-				courseName: "Fizyka",
-			},
-		});
+	test("uploads, filters and deletes group materials", async () => {
+		const formData = new FormData();
+		formData.append("file", new File(["notatki"], "notatki.pdf", { type: "application/pdf" }));
+		formData.append("title", "Notatki z wykladu 1");
+		formData.append("course", "Fizyka");
+
+		const createRes = await multipartRequest("/materials", formData, tokenA);
 		expect(createRes.status).toBe(201);
+		const { material } = (await createRes.json()) as {
+			material: {
+				id: number;
+				title: string;
+				courseName: string;
+				fileUrl: string;
+				fileSize: number;
+				mimeType: string;
+				uploadedBy: number;
+				authorName: string;
+			};
+		};
+		expect(material.title).toBe("Notatki z wykladu 1");
+		expect(material.courseName).toBe("Fizyka");
+		expect(material.fileUrl).toMatch(/^\/files\/[0-9a-f-]{36}\.pdf$/);
+		expect(material.fileSize).toBe(7);
+		expect(material.mimeType).toBe("application/pdf");
+		expect(material.uploadedBy).toBe(annaUser.id);
+		expect(material.authorName).toBe("Anna Kowalska");
 
 		const listResB = await request("GET", "/materials", { token: tokenB });
 		expect(listResB.status).toBe(200);
 		const bodyB = (await listResB.json()) as {
-			materials: Array<{ title: string; authorName: string; kind: string }>;
+			materials: Array<{ id: number; title: string; authorName: string; courseName: string }>;
 		};
 		expect(bodyB.materials).toHaveLength(1);
 		expect(bodyB.materials[0].title).toBe("Notatki z wykladu 1");
 		expect(bodyB.materials[0].authorName).toBe("Anna Kowalska");
 
+		const filteredRes = await request("GET", "/materials?course=Fizyka", { token: tokenB });
+		expect(filteredRes.status).toBe(200);
+		const filteredBody = (await filteredRes.json()) as { materials: unknown[] };
+		expect(filteredBody.materials).toHaveLength(1);
+
+		const emptyFilteredRes = await request("GET", "/materials?course=Matematyka", { token: tokenB });
+		expect(emptyFilteredRes.status).toBe(200);
+		const emptyFilteredBody = (await emptyFilteredRes.json()) as { materials: unknown[] };
+		expect(emptyFilteredBody.materials).toHaveLength(0);
+
 		// Celina (inna grupa) nie widzi materialow grupy Anny i Bartka.
 		const listResC = await request("GET", "/materials", { token: tokenC });
 		const bodyC = (await listResC.json()) as { materials: unknown[] };
 		expect(bodyC.materials).toHaveLength(0);
+
+		const foreignDeleteRes = await request("DELETE", `/materials/${material.id}`, { token: tokenC });
+		expect(foreignDeleteRes.status).toBe(404);
+
+		const deleteRes = await request("DELETE", `/materials/${material.id}`, { token: tokenB });
+		expect(deleteRes.status).toBe(200);
+		expect(await deleteRes.json()).toEqual({ deleted: true });
+
+		const afterDeleteRes = await request("GET", "/materials", { token: tokenA });
+		const afterDeleteBody = (await afterDeleteRes.json()) as { materials: unknown[] };
+		expect(afterDeleteBody.materials).toHaveLength(0);
 	});
 
-	test("rejects invalid kind", async () => {
-		const res = await request("POST", "/materials", {
-			token: tokenA,
-			body: { title: "Cos", kind: "memy" },
-		});
-		expect(res.status).toBe(422);
+	test("requires course name for upload", async () => {
+		const formData = new FormData();
+		formData.append("file", new File(["x"], "notatki.pdf", { type: "application/pdf" }));
+
+		const res = await multipartRequest("/materials", formData, tokenA);
+		expect(res.status).toBe(400);
+		expect(await res.json()).toEqual({ message: "Course name is required." });
 	});
 });
