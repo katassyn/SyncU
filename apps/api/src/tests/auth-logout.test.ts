@@ -38,7 +38,7 @@ function post(path: string, body: unknown, token?: string) {
 
 const registrationPayload = {
 	email: "logout@example.com",
-	password: "VeryStrong123",
+	password: "VeryStrong123!",
 	displayName: "Kamil Gebala",
 	university: "Politechnika Krakowska",
 	fieldOfStudy: "Informatyka",

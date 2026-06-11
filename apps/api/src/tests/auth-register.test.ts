@@ -23,12 +23,13 @@ afterAll(cleanup);
 
 const app = new Elysia().use(authRoutes);
 
-function req(body: unknown) {
+function req(body: unknown, headers: Record<string, string> = {}) {
 	return app.handle(
 		new Request("http://localhost/auth/register", {
 			method: "POST",
 			headers: {
 				"content-type": "application/json",
+				...headers,
 			},
 			body: JSON.stringify(body),
 		}),
@@ -37,7 +38,7 @@ function req(body: unknown) {
 
 const validPayload = {
 	email: "register@example.com",
-	password: "VeryStrong123",
+	password: "VeryStrong123!",
 	displayName: "Kamil Gebala",
 	university: "Politechnika Krakowska",
 	fieldOfStudy: "Informatyka",
@@ -86,6 +87,47 @@ describe("POST /auth/register", () => {
 		expect(response.status).toBe(409);
 		expect(await response.json()).toEqual({
 			message: "User with this email already exists.",
+		});
+	});
+
+	test("rejects weak password with readable message", async () => {
+		const response = await req({
+			...validPayload,
+			email: "weak-password@example.com",
+			password: "password",
+		});
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toEqual({
+			message: "Password must be at least 10 characters long.",
+		});
+	});
+
+	test("rate limits registration attempts per IP", async () => {
+		const ip = "203.0.113.10";
+
+		for (let index = 0; index < 5; index += 1) {
+			const response = await req(
+				{
+					...validPayload,
+					email: `rate-${index}@example.com`,
+				},
+				{ "x-forwarded-for": ip },
+			);
+			expect(response.status).toBe(201);
+		}
+
+		const response = await req(
+			{
+				...validPayload,
+				email: "rate-limited@example.com",
+			},
+			{ "x-forwarded-for": ip },
+		);
+
+		expect(response.status).toBe(429);
+		expect(await response.json()).toEqual({
+			message: "Too many registration attempts. Please try again in a minute.",
 		});
 	});
 });

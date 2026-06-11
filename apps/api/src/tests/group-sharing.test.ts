@@ -67,12 +67,12 @@ function multipartRequest(path: string, formData: FormData, token?: string) {
 
 async function registerAndLogin(email: string, displayName: string): Promise<string> {
 	const registerResponse = await request("POST", "/auth/register", {
-		body: { email, password: "VeryStrong123", displayName },
+		body: { email, password: "VeryStrong123!", displayName },
 	});
 	expect(registerResponse.status).toBe(201);
 
 	const loginResponse = await request("POST", "/auth/login", {
-		body: { email, password: "VeryStrong123" },
+		body: { email, password: "VeryStrong123!" },
 	});
 	expect(loginResponse.status).toBe(200);
 	const { token } = (await loginResponse.json()) as { token: string };
