@@ -78,9 +78,6 @@ export function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
           >
             Profil
           </Link>
-          <span className="flex items-center gap-3 px-3 py-2.5 rounded-card-sm text-body font-medium text-muted cursor-not-allowed select-none">
-            Ustawienia
-          </span>
         </div>
 
         {/* Footer */}
