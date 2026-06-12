@@ -8,10 +8,11 @@ interface TopBarProps {
 }
 
 const NAV_LINKS = [
-  { to: '/today',   label: 'Dashboard' },
-  { to: '/week',    label: 'Kalendarz' },
-  { to: '/exams',   label: 'Kolokwia' },
-  { to: '/library', label: 'Grupy' },
+  { to: '/today',    label: 'Dashboard' },
+  { to: '/week',     label: 'Kalendarz' },
+  { to: '/subjects', label: 'Przedmioty' },
+  { to: '/exams',    label: 'Kolokwia' },
+  { to: '/library',  label: 'Grupy' },
 ] as const;
 
 export function TopBar({ onProfileClick }: TopBarProps) {

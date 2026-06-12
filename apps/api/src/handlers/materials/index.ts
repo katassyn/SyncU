@@ -154,13 +154,41 @@ export const materialsRoutes = new Elysia({ prefix: "/materials" })
 			const auth = await requireAuth(headers.authorization, set);
 			if (!auth.user) return auth.response;
 
+			const courseName = query.course?.trim();
+
+			// Widok per przedmiot (?course=) jest GLOBALNY - kazdy zalogowany,
+			// kto otworzy przedmiot, widzi wszystkie jego pliki niezaleznie od
+			// grupy autora. Widok bez parametru pozostaje group-scoped.
+			if (courseName) {
+				const rows = db
+					.select({
+						id: materials.id,
+						groupId: materials.groupId,
+						courseName: materials.courseName,
+						title: materials.title,
+						fileUrl: materials.fileUrl,
+						fileSize: materials.fileSize,
+						mimeType: materials.mimeType,
+						uploadedBy: materials.uploadedBy,
+						createdAt: materials.createdAt,
+						authorName: users.displayName,
+					})
+					.from(materials)
+					.innerJoin(users, eq(materials.uploadedBy, users.id))
+					.where(eq(materials.courseName, courseName))
+					.orderBy(desc(materials.createdAt), desc(materials.id))
+					.all();
+
+				return {
+					groupId: auth.user.groupId ?? "",
+					materials: rows,
+				};
+			}
+
 			const group = requireGroupMembership(auth.user, set);
 			if (!group.groupId) return group.response;
 
-			const courseName = query.course?.trim();
-			const where = courseName
-				? and(eq(materials.groupId, group.groupId), eq(materials.courseName, courseName))
-				: eq(materials.groupId, group.groupId);
+			const where = eq(materials.groupId, group.groupId);
 
 			const rows = db
 				.select({

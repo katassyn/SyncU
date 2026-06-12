@@ -247,6 +247,46 @@ describe("GET /exams", () => {
 		const otherBody = (await otherRes.json()) as { exams: unknown[] };
 		expect(otherBody.exams).toHaveLength(0);
 	});
+
+	test("creates exam by courseName from the scraped plan (no manual import)", async () => {
+		// Bartek nie ma zadnego kursu ani semestru - backend tworzy je lazy
+		const courseName = "Metody uczenia maszynowego (test-gs)";
+		const createRes = await request("POST", "/exams", {
+			token: tokenB,
+			body: {
+				courseName,
+				date: "2026-06-28T09:00:00.000Z",
+				scope: "Sieci neuronowe",
+			},
+		});
+		expect(createRes.status).toBe(201);
+		const created = (await createRes.json()) as { exam: { courseName: string } };
+		expect(created.exam.courseName).toBe(courseName);
+
+		// Druga wstawka z ta sama nazwa reuzywa kursu (nie duplikuje)
+		const secondRes = await request("POST", "/exams", {
+			token: tokenB,
+			body: { courseName, date: "2026-07-05T09:00:00.000Z" },
+		});
+		expect(secondRes.status).toBe(201);
+
+		// Anna (ta sama grupa) widzi oba z autorem
+		const listRes = await request("GET", "/exams", { token: tokenA });
+		const listBody = (await listRes.json()) as {
+			exams: Array<{ courseName: string; authorName: string }>;
+		};
+		const fromPlan = listBody.exams.filter((e) => e.courseName === courseName);
+		expect(fromPlan).toHaveLength(2);
+		expect(fromPlan[0].authorName).toBe("Bartek Nowak");
+	});
+
+	test("rejects exam without courseId and courseName", async () => {
+		const res = await request("POST", "/exams", {
+			token: tokenA,
+			body: { date: "2026-06-30T10:00:00.000Z" },
+		});
+		expect(res.status).toBe(400);
+	});
 });
 
 describe("/materials", () => {
@@ -296,6 +336,13 @@ describe("/materials", () => {
 		expect(emptyFilteredRes.status).toBe(200);
 		const emptyFilteredBody = (await emptyFilteredRes.json()) as { materials: unknown[] };
 		expect(emptyFilteredBody.materials).toHaveLength(0);
+
+		// Widok per przedmiot (?course=) jest GLOBALNY - Celina z innej grupy
+		// tez widzi plik Anny po otwarciu przedmiotu
+		const globalRes = await request("GET", "/materials?course=Fizyka", { token: tokenC });
+		expect(globalRes.status).toBe(200);
+		const globalBody = (await globalRes.json()) as { materials: Array<{ id: number }> };
+		expect(globalBody.materials.some((m) => m.id === material.id)).toBe(true);
 
 		// Celina (inna grupa) nie widzi materialow grupy Anny i Bartka.
 		const listResC = await request("GET", "/materials", { token: tokenC });

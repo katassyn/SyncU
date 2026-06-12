@@ -32,24 +32,6 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="px-3 py-4 border-t border-border-subtle">
-        <NavLink
-          to="/import"
-          className={({ isActive }) =>
-            [
-              'flex items-center gap-3 px-3 py-2.5 rounded-card-sm text-body font-medium transition-colors',
-              isActive
-                ? 'bg-primary text-on-primary'
-                : 'text-muted hover:bg-surface-1 hover:text-heading',
-            ].join(' ')
-          }
-        >
-          <span className="shrink-0 size-[18px] flex items-center justify-center">
-            <ImportIcon />
-          </span>
-          Import planu
-        </NavLink>
-      </div>
     </aside>
   );
 }
@@ -74,11 +56,3 @@ function SubjectsIcon() {
   );
 }
 
-function ImportIcon() {
-  return (
-    <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="size-full">
-      <path d="M9 2v9M6 8l3 3 3-3" />
-      <path d="M3 13v2a1 1 0 001 1h10a1 1 0 001-1v-2" />
-    </svg>
-  );
-}

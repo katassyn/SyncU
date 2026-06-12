@@ -1,26 +1,32 @@
 import { useEffect, useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import { extractSubjects } from '@syncu/core'
 import { Button, ExamCard, Form, FormField, Input, Select } from '@syncu/ui'
-import { createExam, fetchCourses, fetchExams, type ExamRecord } from '../lib/api'
+import { createExam, fetchExams, fetchGroupSchedule, type ExamRecord } from '../lib/api'
+import { useAuth } from '../lib/AuthContext'
 import { PageShell } from './PageShell'
+
+const LS_GROUP_KEY = 'syncu.selectedGroup'
 
 type State =
   | { kind: 'loading' }
   | { kind: 'loaded'; upcoming: ExamRecord[]; past: ExamRecord[] }
   | { kind: 'error' }
 
-type CourseOption = { id: number; name: string }
-
 type CoursesState =
   | { kind: 'loading' }
-  | { kind: 'loaded'; courses: CourseOption[] }
+  | { kind: 'loaded'; courses: string[] }
+  | { kind: 'no-group' }
   | { kind: 'error' }
 
 export default function Exams() {
+  const auth = useAuth()
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [retry, setRetry] = useState(0)
   const [coursesState, setCoursesState] = useState<CoursesState>({ kind: 'loading' })
   const [showForm, setShowForm] = useState(false)
+
+  const userGroupId = auth.kind === 'authenticated' ? auth.user.groupId : null
 
   useEffect(() => {
     let cancelled = false
@@ -43,25 +49,34 @@ export default function Exams() {
     return () => { cancelled = true }
   }, [retry])
 
-  // Lista przedmiotow do pickera w formularzu - GET /courses (wszystkie
-  // przedmioty usera ze wszystkich semestrow, niezaleznie od tygodnia).
+  // Lista przedmiotow do pickera - wyciagana z automatycznie scrapowanego
+  // planu PK grupy usera (extractSubjects z @syncu/core scala skroty z labow
+  // z pelnymi nazwami z wykladow).
   useEffect(() => {
+    if (auth.kind === 'loading') return
+    let groupId: string | null = null
+    try {
+      groupId = localStorage.getItem(LS_GROUP_KEY) ?? userGroupId
+    } catch {
+      groupId = userGroupId
+    }
+    if (!groupId) {
+      setCoursesState({ kind: 'no-group' })
+      return
+    }
     let cancelled = false
-    fetchCourses()
-      .then((res) => {
+    fetchGroupSchedule(groupId)
+      .then((schedule) => {
         if (cancelled) return
-        const unique = new Map<number, string>()
-        for (const course of res.courses) unique.set(course.id, course.name)
-        const courses = [...unique]
-          .map(([id, name]) => ({ id, name }))
-          .sort((a, b) => a.name.localeCompare(b.name, 'pl'))
+        const entries = schedule.sections.flatMap((s) => s.entries)
+        const courses = extractSubjects(entries).map((s) => s.name)
         setCoursesState({ kind: 'loaded', courses })
       })
       .catch(() => {
         if (!cancelled) setCoursesState({ kind: 'error' })
       })
     return () => { cancelled = true }
-  }, [])
+  }, [auth.kind, userGroupId])
 
   function handleCreated() {
     setShowForm(false)
@@ -127,7 +142,7 @@ export default function Exams() {
             {state.upcoming.map((exam) => (
               <NavLink
                 key={exam.id}
-                to={`/subject/${exam.courseId}`}
+                to={`/subject/${encodeURIComponent(exam.courseName)}`}
                 className="block rounded-card-sm hover:bg-surface-1 transition-colors"
               >
                 <ExamCard
@@ -148,7 +163,7 @@ export default function Exams() {
             {state.past.map((exam) => (
               <NavLink
                 key={exam.id}
-                to={`/subject/${exam.courseId}`}
+                to={`/subject/${encodeURIComponent(exam.courseName)}`}
                 className="block rounded-card-sm hover:bg-surface-1 transition-colors"
               >
                 <ExamCard
@@ -175,7 +190,7 @@ function AddExamForm({
   onCreated: () => void
   onCancel: () => void
 }) {
-  const [courseId, setCourseId] = useState('')
+  const [courseName, setCourseName] = useState('')
   const [date, setDate] = useState('')
   const [scope, setScope] = useState('')
   const [saving, setSaving] = useState(false)
@@ -184,16 +199,18 @@ function AddExamForm({
   const courseOptions = useMemo(
     () =>
       coursesState.kind === 'loaded'
-        ? coursesState.courses.map((c) => ({ value: String(c.id), label: c.name }))
+        ? coursesState.courses.map((name) => ({ value: name, label: name }))
         : [],
     [coursesState],
   )
 
-  const noCourses = coursesState.kind === 'loaded' && courseOptions.length === 0
+  const noCourses =
+    coursesState.kind === 'no-group' ||
+    (coursesState.kind === 'loaded' && courseOptions.length === 0)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!courseId) { setError('Wybierz przedmiot.'); return }
+    if (!courseName) { setError('Wybierz przedmiot.'); return }
     if (!date) { setError('Wybierz datę.'); return }
 
     setSaving(true)
@@ -202,7 +219,7 @@ function AddExamForm({
       // Data dnia -> ISO date-time (lokalne poludnie, by uniknac przesuniecia o dzien).
       const isoDate = new Date(`${date}T12:00:00`).toISOString()
       await createExam({
-        courseId: Number(courseId),
+        courseName,
         date: isoDate,
         scope: scope.trim() || null,
       })
@@ -219,15 +236,24 @@ function AddExamForm({
 
       {coursesState.kind === 'error' && (
         <p className="text-ui text-danger mb-3">
-          Nie udało się pobrać listy przedmiotów. Spróbuj odświeżyć stronę.
+          Nie udało się pobrać planu zajęć. Spróbuj odświeżyć stronę.
         </p>
       )}
 
       {noCourses ? (
         <div className="flex flex-col gap-3">
           <p className="text-ui text-muted m-0">
-            Brak przedmiotów do wyboru w planie bieżącego tygodnia. Zaimportuj plan
-            zajęć, aby móc dodać kolokwium.
+            {coursesState.kind === 'no-group' ? (
+              <>
+                Wybierz swoją grupę w{' '}
+                <NavLink to="/profile" className="text-primary-nav font-semibold hover:underline">
+                  profilu
+                </NavLink>
+                , aby dodać kolokwium z przedmiotów ze swojego planu.
+              </>
+            ) : (
+              'Plan Twojej grupy nie zawiera jeszcze żadnych przedmiotów.'
+            )}
           </p>
           <div className="flex justify-end">
             <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
@@ -241,8 +267,8 @@ function AddExamForm({
             label="Przedmiot"
             id="exam-course"
             placeholder="Wybierz przedmiot"
-            value={courseId}
-            onChange={(e) => setCourseId(e.target.value)}
+            value={courseName}
+            onChange={(e) => setCourseName(e.target.value)}
             options={courseOptions}
             disabled={saving || coursesState.kind !== 'loaded'}
             required

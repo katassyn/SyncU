@@ -6,9 +6,9 @@ import Today from './pages/Today'
 import Profile from './pages/Profile'
 import Week from './pages/Week'
 import Subject from './pages/Subject'
+import Subjects from './pages/Subjects'
 import Library from './pages/Library'
 import Exams from './pages/Exams'
-import Import from './pages/Import'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Onboarding from './pages/Onboarding'
@@ -22,9 +22,9 @@ function App() {
 
         <Route path="/today" element={<ProtectedRoute><Today /></ProtectedRoute>} />
         <Route path="/week" element={<ProtectedRoute><Week /></ProtectedRoute>} />
-        <Route path="/subject/:id" element={<ProtectedRoute><Subject /></ProtectedRoute>} />
+        <Route path="/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
+        <Route path="/subject/:name" element={<ProtectedRoute><Subject /></ProtectedRoute>} />
         <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
-        <Route path="/import" element={<ProtectedRoute><Import /></ProtectedRoute>} />
         <Route path="/exams" element={<ProtectedRoute><Exams /></ProtectedRoute>} />
 
         {/* Auth + onboarding (G-6.9, G-6.10, G-7.4) */}

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
 import type { ClassSessionType, ScheduleData, ScheduleEntry, WeekEvent } from '@syncu/types'
 import { normalize } from '@syncu/core'
 import { Button, Card } from '@syncu/ui'
@@ -71,7 +70,6 @@ export default function Week() {
   const [monthDate, setMonthDate] = useState<Date>(() => startOfMonth(new Date()))
   const [changes, setChanges] = useState<ScheduleChangeRecord[]>([])
   const [toast, setToast] = useState<string | null>(null)
-  const navigate = useNavigate()
 
   // G-9: fetch zmian dla wybranej grupy + toast jezeli sa swieze od ostatniej wizyty
   const loadedSelected = state.kind === 'loaded' ? state.selected : null
@@ -321,11 +319,8 @@ export default function Week() {
             <Card variant="surface" padding="lg" className="text-center">
               <p className="text-heading font-semibold mb-2">Brak zajęć</p>
               <p className="text-muted text-ui">
-                W tym dniu nie ma zajęć.{' '}
-                <NavLink to="/import" className="text-primary-nav font-semibold hover:underline">
-                  Zaimportuj plan
-                </NavLink>
-                .
+                W tym dniu nie ma zajęć. Sprawdź sąsiednie dni — plan zaoczny
+                nie obejmuje każdego dnia.
               </p>
             </Card>
           )}
@@ -371,7 +366,6 @@ export default function Week() {
             <EmptyWeekState
               onPrev={() => setWeekStart(addDays(weekStart, -7))}
               onNext={() => setWeekStart(addDays(weekStart, 7))}
-              onImport={() => navigate('/import')}
             />
           )}
 
@@ -865,11 +859,9 @@ function UserEventsPanel({ onChanged }: { onChanged: () => void }) {
 function EmptyWeekState({
   onPrev,
   onNext,
-  onImport,
 }: {
   onPrev: () => void
   onNext: () => void
-  onImport: () => void
 }) {
   return (
     <Card variant="surface" padding="lg" className="text-center">
@@ -880,7 +872,7 @@ function EmptyWeekState({
         Plan studiów zaocznych nie obejmuje każdego weekendu. Sprawdź sąsiednie
         tygodnie — tam pewnie coś jest.
       </p>
-      <div className="flex gap-2 justify-center mb-8 flex-wrap">
+      <div className="flex gap-2 justify-center flex-wrap">
         <Button variant="secondary" size="md" onClick={onPrev}>
           ← Poprzedni tydzień
         </Button>
@@ -888,13 +880,6 @@ function EmptyWeekState({
           Następny tydzień →
         </Button>
       </div>
-      <button
-        type="button"
-        onClick={onImport}
-        className="text-sm text-muted underline hover:text-primary"
-      >
-        Chcesz wgrać własny plik .xlsx? Idź do /import
-      </button>
     </Card>
   )
 }

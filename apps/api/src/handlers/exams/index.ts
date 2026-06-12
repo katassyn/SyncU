@@ -5,10 +5,69 @@ import { courses, exams, semesters, users } from "../../db/schema";
 import { getAuthenticatedUser, getCurrentTimestamp } from "../auth/shared";
 
 const createExamBody = t.Object({
-	courseId: t.Number({ minimum: 1 }),
+	courseId: t.Optional(t.Number({ minimum: 1 })),
+	// Nazwa przedmiotu z planu PK (frontend wyciaga ja z /schedule/group/:id).
+	// Kurs i semestr sa tworzone automatycznie, bo plan jest scrapowany -
+	// user nie importuje juz nic recznie.
+	courseName: t.Optional(t.String({ minLength: 2, maxLength: 200 })),
 	date: t.String({ format: "date-time" }),
 	scope: t.Optional(t.Nullable(t.String({ maxLength: 1000 }))),
 });
+
+/**
+ * Znajdz kurs usera po nazwie albo zaloz go (wraz z aktywnym semestrem,
+ * jesli user jeszcze zadnego nie ma). Plan jest automatyczny, wiec kursy
+ * powstaja lazy przy pierwszym kolokwium z danego przedmiotu.
+ */
+function findOrCreateCourseByName(userId: number, courseName: string) {
+	const existing = db
+		.select({ id: courses.id, name: courses.name })
+		.from(courses)
+		.innerJoin(semesters, eq(courses.semesterId, semesters.id))
+		.where(and(eq(semesters.userId, userId), eq(courses.name, courseName)))
+		.get();
+
+	if (existing) return existing;
+
+	const now = getCurrentTimestamp();
+
+	let semester = db
+		.select({ id: semesters.id })
+		.from(semesters)
+		.where(and(eq(semesters.userId, userId), eq(semesters.isActive, 1)))
+		.get();
+
+	if (!semester) {
+		const month = new Date().getMonth() + 1;
+		const year = new Date().getFullYear();
+		const term = month >= 10 || month <= 2 ? "zimowy" : "letni";
+		const academicYear = month >= 10 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
+		semester = db
+			.insert(semesters)
+			.values({
+				userId,
+				name: `Semestr ${term} ${academicYear}`,
+				academicYear,
+				term,
+				isActive: 1,
+				createdAt: now,
+				updatedAt: now,
+			})
+			.returning({ id: semesters.id })
+			.get();
+	}
+
+	return db
+		.insert(courses)
+		.values({
+			semesterId: semester.id,
+			name: courseName,
+			createdAt: now,
+			updatedAt: now,
+		})
+		.returning({ id: courses.id, name: courses.name })
+		.get();
+}
 
 export const examsRoutes = new Elysia({ prefix: "/exams" })
 	.post(
@@ -30,15 +89,27 @@ export const examsRoutes = new Elysia({ prefix: "/exams" })
 				};
 			}
 
-			const course = db
-				.select({
-					id: courses.id,
-					name: courses.name,
-				})
-				.from(courses)
-				.innerJoin(semesters, eq(courses.semesterId, semesters.id))
-				.where(and(eq(courses.id, body.courseId), eq(semesters.userId, currentUser.id)))
-				.get();
+			const trimmedCourseName = body.courseName?.trim();
+			if (body.courseId === undefined && !trimmedCourseName) {
+				set.status = 400;
+				return {
+					message: "Either courseId or courseName must be provided.",
+				};
+			}
+
+			const course = trimmedCourseName
+				? findOrCreateCourseByName(currentUser.id, trimmedCourseName)
+				: db
+						.select({
+							id: courses.id,
+							name: courses.name,
+						})
+						.from(courses)
+						.innerJoin(semesters, eq(courses.semesterId, semesters.id))
+						.where(
+							and(eq(courses.id, body.courseId!), eq(semesters.userId, currentUser.id)),
+						)
+						.get();
 
 			if (!course) {
 				set.status = 404;
@@ -53,7 +124,7 @@ export const examsRoutes = new Elysia({ prefix: "/exams" })
 				.values({
 					groupId: currentUser.groupId,
 					createdBy: currentUser.id,
-					courseId: body.courseId,
+					courseId: course.id,
 					date: body.date,
 					scope: body.scope ?? null,
 					createdAt,

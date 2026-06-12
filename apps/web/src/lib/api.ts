@@ -88,52 +88,6 @@ export function fetchScheduleChanges(groupId: string): Promise<ScheduleChangesRe
   return request<ScheduleChangesResponse>(`/schedule/changes?groupId=${encodeURIComponent(groupId)}`)
 }
 
-/* --- import planu (G-5.6) --- */
-
-export type ConfirmImportBody = {
-  user: {
-    email: string
-    displayName: string
-    university?: string | null
-    fieldOfStudy?: string | null
-    yearOfStudy?: number | null
-  }
-  semester: {
-    name: string
-    academicYear: string
-    term: string
-    startsAt?: string | null
-    endsAt?: string | null
-    isActive?: boolean
-  }
-  source: {
-    kind: string
-    url?: string | null
-    filename?: string | null
-  }
-  section: {
-    id: string
-    label: string
-    yearSemLabel: string
-    groupId: number | string
-    entries: Array<{ time: string; date: string; subject: string }>
-  }
-}
-
-export type ConfirmImportResponse = {
-  courseCount: number
-  classSessionCount: number
-}
-
-/** POST /timetable/import/confirm - persystencja sparsowanego planu w bazie. */
-export function confirmTimetableImport(body: ConfirmImportBody): Promise<ConfirmImportResponse> {
-  return request<ConfirmImportResponse>('/timetable/import/confirm', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-}
-
 /* --- kolokwia (G-8 / G-12) --- */
 
 export type ExamRecord = {
@@ -157,7 +111,8 @@ export function fetchExams(): Promise<ExamsResponse> {
 }
 
 export type CreateExamInput = {
-  courseId: number
+  /** Nazwa przedmiotu z planu PK (backend tworzy kurs lazy przy 1. kolokwium). */
+  courseName: string
   /** ISO date-time (np. z `new Date(...).toISOString()`). */
   date: string
   scope?: string | null
@@ -167,62 +122,13 @@ export type CreateExamResponse = {
   exam: ExamRecord
 }
 
-/**
- * POST /exams - utworz nowe kolokwium (wymaga tokenu).
- * Backend (apps/api/src/handlers/exams/index.ts) waliduje, ze `courseId`
- * nalezy do przedmiotow zalogowanego usera (semesters.userId = me).
- */
+/** POST /exams - utworz nowe kolokwium widoczne dla calej grupy (wymaga tokenu). */
 export function createExam(input: CreateExamInput): Promise<CreateExamResponse> {
   return authedRequest<CreateExamResponse>('/exams', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
-}
-
-/* --- przedmioty usera --- */
-
-export type CourseSummary = {
-  id: number
-  name: string
-  semesterId: number
-}
-
-/** GET /courses - przedmioty zalogowanego usera (do pickera kolokwiow). */
-export function fetchCourses(): Promise<{ courses: CourseSummary[] }> {
-  return authedRequest<{ courses: CourseSummary[] }>('/courses')
-}
-
-export type CourseSession = {
-  id: number
-  sessionType: string
-  title: string
-  startsAt: string
-  endsAt: string
-  room: string | null
-  lecturerName: string | null
-}
-
-export type CourseDetail = {
-  course: {
-    id: number
-    name: string
-    semesterId: number
-    lecturerName: string | null
-    room: string | null
-  }
-  sessions: CourseSession[]
-  exams: Array<{
-    id: number
-    date: string
-    scope: string | null
-    createdAt: string
-  }>
-}
-
-/** GET /courses/:id - szczegoly przedmiotu (zajecia + kolokwia). 404 jesli nie moj. */
-export function fetchCourseDetail(id: number): Promise<CourseDetail> {
-  return authedRequest<CourseDetail>(`/courses/${id}`)
 }
 
 /* --- wlasne wydarzenia w planie --- */

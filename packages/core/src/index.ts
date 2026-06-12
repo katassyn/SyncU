@@ -53,3 +53,11 @@ export type {
 	LecturerInfo,
 	ParsedTimetable,
 } from "./timetable/types";
+
+export {
+	extractSubjectName,
+	extractSubjects,
+	entryMatchesSubject,
+} from "./timetable/subjects";
+
+export type { SubjectInfo } from "./timetable/subjects";

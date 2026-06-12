@@ -55,17 +55,6 @@ type ExamsState =
   | { kind: 'loaded'; upcoming: ExamRecord[] }
   | { kind: 'error' }
 
-const studyProgress = [
-  { subject: 'Fizyka',     percent: 75 },
-  { subject: 'Etyka',      percent: 40 },
-  { subject: 'Matematyka', percent: 90 },
-];
-
-const resources = [
-  { id: 1, title: 'Kwantowe Tunelowanie — Notatki', kind: 'PDF',   author: 'Jan K.', live: false },
-  { id: 2, title: 'Etyka AI — Mapa myśli',          kind: 'BOARD', author: 'Zespół', live: true  },
-];
-
 // --------------- helpers ---------------
 
 function parseDDMM(ddmm: string): Date {
@@ -75,33 +64,6 @@ function parseDDMM(ddmm: string): Date {
 
 function dayName(date: Date): string {
   return date.toLocaleDateString('pl-PL', { weekday: 'long' });
-}
-
-function CircularProgress({ subject, percent }: { subject: string; percent: number }) {
-  const r = 28;
-  const circ = 2 * Math.PI * r;
-  const offset = circ * (1 - percent / 100);
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="relative size-18">
-        <svg className="size-full -rotate-90" viewBox="0 0 72 72">
-          <circle cx="36" cy="36" r={r} className="text-surface-2" fill="none" stroke="currentColor" strokeWidth="8" />
-          <circle
-            cx="36" cy="36" r={r}
-            className="text-primary"
-            fill="none" stroke="currentColor" strokeWidth="8"
-            strokeDasharray={circ}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-          />
-        </svg>
-        <span className="absolute inset-0 flex items-center justify-center text-badge font-bold text-heading">
-          {percent}%
-        </span>
-      </div>
-      <span className="text-badge text-muted">{subject}</span>
-    </div>
-  );
 }
 
 // --------------- sekcja "Dzisiaj" ---------------
@@ -121,8 +83,8 @@ function TodaySessionsList({ state, todayEntries }: { state: ScheduleState; toda
     return (
       <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
         <p className="text-ui text-muted m-0">Nie udało się pobrać planu zajęć.</p>
-        <NavLink to="/import" className="text-badge font-bold text-primary-nav hover:underline">
-          Zaimportuj plan →
+        <NavLink to="/profile" className="text-badge font-bold text-primary-nav hover:underline">
+          Sprawdź grupę w profilu →
         </NavLink>
       </div>
     );
@@ -133,8 +95,8 @@ function TodaySessionsList({ state, todayEntries }: { state: ScheduleState; toda
       return (
         <div className="flex flex-col items-center justify-center py-8 gap-3">
           <p className="text-body text-muted text-center m-0">Brak zajęć na dziś.</p>
-          <NavLink to="/import" className="text-badge font-bold text-primary-nav hover:underline">
-            Zaimportuj plan →
+          <NavLink to="/week" className="text-badge font-bold text-primary-nav hover:underline">
+            Zobacz cały tydzień →
           </NavLink>
         </div>
       );
@@ -390,83 +352,13 @@ export default function Today() {
           </NavLink>
         </div>
 
-        {/* Postęp nauki — 5 kolumn */}
-        <div className="lg:col-span-5 bg-white rounded-card-lg shadow-card-sm p-6 flex flex-col gap-6">
-          <p className="text-h3 font-bold text-heading m-0">Postęp nauki</p>
-          <div className="flex items-center justify-around gap-4">
-            {studyProgress.map(p => (
-              <CircularProgress key={p.subject} subject={p.subject} percent={p.percent} />
-            ))}
-          </div>
-        </div>
-
-        {/* Wspólne zasoby — 7 kolumn */}
-        <div className="lg:col-span-7 bg-white rounded-card-lg shadow-card-sm p-6 flex flex-col gap-4">
-          <p className="text-h3 font-bold text-heading m-0">Wspólne zasoby</p>
-          <div className="flex flex-col gap-3">
-            {resources.map(r => (
-              <div key={r.id} className="flex items-center gap-4 p-4 rounded-card-sm bg-surface-1 hover:bg-surface-2 transition-colors cursor-pointer">
-                <div className={['size-10 rounded-card-sm flex items-center justify-center shrink-0', r.kind === 'PDF' ? 'bg-[rgba(168,56,54,.08)] text-danger' : 'bg-primary-light text-primary-nav'].join(' ')}>
-                  {r.kind === 'PDF' ? <PdfIcon /> : <BoardIcon />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-body font-semibold text-heading m-0 truncate">{r.title}</p>
-                  <span className="text-badge text-muted">{r.author}</span>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {r.live && (
-                    <span className="flex items-center gap-1 text-badge font-bold uppercase tracking-badge bg-[rgba(168,56,54,.08)] text-danger rounded-pill px-2 py-0.5">
-                      <span className="size-1.5 rounded-full bg-danger animate-pulse" />
-                      Na żywo
-                    </span>
-                  )}
-                  <span className="text-badge font-bold text-muted uppercase tracking-badge">{r.kind}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
       </div>
 
       {/* Nadchodzące zajęcia */}
       <UpcomingList state={scheduleState} entries={upcomingEntries} />
-
-      {/* FAB */}
-      <button
-        aria-label="Dodaj"
-        className="fixed bottom-6 right-6 size-16 rounded-pill bg-primary text-on-primary shadow-fab flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer z-50"
-      >
-        <PlusIcon />
-      </button>
     </div>
   );
 }
 
 // --------------- icons ---------------
 
-function PdfIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path d="M5 2h7l4 4v12a1 1 0 01-1 1H5a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-      <path d="M12 2v4h4M7 10h6M7 13h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function BoardIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <rect x="2" y="2" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M6 7h8M6 10h5M6 13h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
