@@ -51,7 +51,7 @@ export function TopBar({ onProfileClick }: TopBarProps) {
           </button>
 
           {/* Navigation — desktop */}
-          <nav className="hidden md:flex items-center gap-4 lg:gap-8">
+          <nav className="hidden md:flex items-center gap-3 lg:gap-6 xl:gap-8">
             {NAV_LINKS.map(({ to, label }) => (
               <NavLink key={to} to={to} className={desktopLinkClass}>{label}</NavLink>
             ))}

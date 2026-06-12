@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { TopBar } from './TopBar';
-import { Sidebar } from './Sidebar';
 import { ProfileDrawer } from './ProfileDrawer';
 
 interface AppLayoutProps {
@@ -12,15 +11,12 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { pathname } = useLocation();
   const isAuthPage = ['/login', '/register', '/onboarding'].includes(pathname);
-  const showSidebar = !isAuthPage && pathname.startsWith('/week');
 
   return (
     <div className="min-h-screen bg-bg-base">
       {!isAuthPage && <TopBar onProfileClick={() => setDrawerOpen(true)} />}
 
-      {showSidebar && <Sidebar />}
-
-      <main className={[!isAuthPage && 'pt-[57px]', showSidebar ? 'pl-60' : ''].filter(Boolean).join(' ')}>
+      <main className={!isAuthPage ? 'pt-[57px]' : ''}>
         {children}
       </main>
 
